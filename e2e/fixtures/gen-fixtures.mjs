@@ -266,8 +266,13 @@ for (const c of channels) {
   let t = snapped;
   let ep = 1;
   while (t < endWindow) {
-    // 30-90 min durations in 15-min steps: 30,45,60,75,90
-    const dur = (2 + Math.floor(rand() * 5)) * 15 * 60e3;
+    // 30-90 min durations in 15-min steps: 30,45,60,75,90. Channel 1 (the
+    // guide's landing row) uses 30/60/90 only so its cells always start on a
+    // half-hour: the grid origin is the half-hour floor of "now", so the
+    // airing cell never has a visible predecessor sliver and "LEFT at the grid
+    // edge" means the same thing at every time of day.
+    const step = 2 + Math.floor(rand() * 5);
+    const dur = (c.num === 1 ? [2, 4, 6][step % 3] : step) * 15 * 60e3;
     const stop = t + dur;
     const title = c.titles[Math.floor(rand() * c.titles.length)];
     const desc = DESCS[Math.floor(rand() * DESCS.length)];

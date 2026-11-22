@@ -26,7 +26,7 @@ Feature: Add playlist onboarding
     Then I see "Playlist is processed"
     And I see "Channels: 31"
     And I see "Playlist name"
-    And I see "10.0.2.2"
+    And I see "127.0.0.1"
     And I see "TV playlist"
     When I select "Next"
     # EPG step (capture 13): the url-tvg from the M3U header is pre-filled.

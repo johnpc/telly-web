@@ -8,6 +8,8 @@ import { defineBddConfig } from 'playwright-bdd';
 const testDir = defineBddConfig({
   features: 'e2e/features/**/*.feature',
   steps: 'e2e/steps/**/*.ts',
+  // Locally a slice may run before its siblings' steps exist; CI must never hide a missing step.
+  missingSteps: process.env.CI ? 'fail-on-gen' : 'skip-scenario',
 });
 
 const TAG = process.env.E2E_TAG ? `@${process.env.E2E_TAG}` : undefined;

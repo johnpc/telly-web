@@ -1,7 +1,7 @@
 // Shared acceptance harness. Every ACTION is a key press — the product
 // promise is that a remote drives everything. Assertions read the DOM.
-import { createBdd } from 'playwright-bdd';
-import { test as base, expect, type Page } from '@playwright/test';
+import { createBdd, test as base } from 'playwright-bdd';
+import { expect, type Page } from '@playwright/test';
 
 export const FIXTURE_HOST = 'http://127.0.0.1:8090';
 
@@ -37,6 +37,13 @@ export type RemotePress =
   | 'MediaFastForward'
   | 'MediaPlayPause';
 
+/** The start route has resolved: keys pressed before this would hit the bare Boot frame. */
+async function settled(page: Page): Promise<void> {
+  const root = page.getByTestId('app-root');
+  await expect(root).toBeVisible();
+  await expect(root).not.toHaveAttribute('data-route', 'Boot');
+}
+
 export const test = base.extend<{ world: TellyWorld }>({
   world: async ({ page }, use) => {
     const world: TellyWorld = {
@@ -57,11 +64,11 @@ export const test = base.extend<{ world: TellyWorld }>({
           );
         });
         await page.goto('/?e2e=1');
-        await expect(page.getByTestId('app-root')).toBeVisible();
+        await settled(page);
       },
       async relaunch() {
         await page.goto('/?e2e=1');
-        await expect(page.getByTestId('app-root')).toBeVisible();
+        await settled(page);
       },
       async press(key, times = 1) {
         for (let i = 0; i < times; i += 1) await page.keyboard.press(key);
@@ -83,7 +90,11 @@ export const test = base.extend<{ world: TellyWorld }>({
         await page.keyboard.press('Enter');
       },
       async type(text) {
+        // Android `performTextReplacement` + IME action: value dialogs commit here; the search
+        // query bar (which owns a voice orb) commits only on the explicit IME-search step.
         await page.keyboard.type(text);
+        const searchBar = await page.getByTestId('search-query').count();
+        if (searchBar === 0) await page.keyboard.press('Enter');
       },
       async seeText(text) {
         await expect(page.getByText(text, { exact: false }).first()).toBeVisible();
@@ -96,6 +107,7 @@ export const test = base.extend<{ world: TellyWorld }>({
           await window.telly.completeSetup(url);
         }, playlistUrl);
         await page.goto('/?e2e=1');
+        await settled(page);
       },
     };
     await use(world);

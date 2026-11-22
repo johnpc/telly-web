@@ -1,0 +1,58 @@
+import type { GroupToolSession } from '@/features/groups/groupToolSession';
+import type { GuideInfoData } from './guideInfoBuilder';
+import { type GuideCell, NO_INFORMATION } from './guideModel';
+
+/** PIN dialog flavours of the sheet's Block/Unblock row (Android `BlockPinMode`). */
+export type BlockPinMode = 'Set a PIN' | 'Enter PIN';
+
+/**
+ * Which interaction layer owns the D-pad on the guide screen (Android
+ * `GuideLayer`). Pushed screens carry the layer BACK returns to; Channel
+ * options REPLACES the sheet so its BACK lands on the grid.
+ */
+export type GuideLayer =
+  | { kind: 'Grid' }
+  | { kind: 'Groups' }
+  | { kind: 'CellMenu'; cell: GuideCell }
+  | { kind: 'RowMenu' }
+  | { kind: 'ComingSoon'; feature: string; back: GuideLayer }
+  | { kind: 'Description'; title: string; text: string; back: GuideLayer }
+  | { kind: 'ChannelOptions'; channelId: number }
+  | { kind: 'BlockPin'; channelId: number; mode: BlockPinMode; back: GuideLayer }
+  | { kind: 'GroupPin'; group: string }
+  | { kind: 'GroupTool'; session: GroupToolSession };
+
+export const GRID: GuideLayer = { kind: 'Grid' };
+export const GROUPS: GuideLayer = { kind: 'Groups' };
+export const ROW_MENU: GuideLayer = { kind: 'RowMenu' };
+
+/** One BACK level per layer: pushed screens → their `back`, tools → the sheet, everything else → grid. */
+export function backOf(layer: GuideLayer): GuideLayer {
+  switch (layer.kind) {
+    case 'ComingSoon':
+    case 'Description':
+    case 'BlockPin':
+      return layer.back;
+    case 'GroupTool':
+      return ROW_MENU;
+    case 'GroupPin':
+      return GROUPS;
+    default:
+      return GRID;
+  }
+}
+
+/** The sheet's Program-description layer from the focused programme. */
+export function descriptionLayer(info: GuideInfoData | null): GuideLayer {
+  return {
+    kind: 'Description',
+    title: info?.title ?? NO_INFORMATION,
+    text: info?.description ?? NO_INFORMATION,
+    back: ROW_MENU,
+  };
+}
+
+/** Layers rendered as a pushed surface over the (dimmed) grid. */
+export function isPushed(layer: GuideLayer): boolean {
+  return !['Grid', 'Groups', 'CellMenu', 'RowMenu'].includes(layer.kind);
+}

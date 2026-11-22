@@ -36,6 +36,8 @@ export class TellyDb extends Dexie {
   reminders!: EntityTable<ReminderRow, 'id'>;
   vod_items!: EntityTable<VodItemRow, 'id'>;
   vod_positions!: Table<VodPositionRow, string>;
+  /** Tiny key/value rows live queries can depend on (e.g. the visibility epoch bumped by settings). */
+  meta!: Table<MetaRow, string>;
 
   constructor(name: string = DB_NAME) {
     super(name);
@@ -53,8 +55,17 @@ export class TellyDb extends Dexie {
       vod_items: '++id, playlistId, itemKey, sortIndex, streamUrl',
       vod_positions: 'itemKey',
     });
+    this.version(2).stores({ meta: 'key' });
   }
 }
+
+export interface MetaRow {
+  key: string;
+  value: string;
+}
+
+/** Bumped whenever a setting that changes channel VISIBILITY (Manage groups) is written. */
+export const VISIBILITY_EPOCH_KEY = 'visibilityEpoch';
 
 /** The production database; repositories default to it, tests construct their own. */
 export const tellyDb = new TellyDb();

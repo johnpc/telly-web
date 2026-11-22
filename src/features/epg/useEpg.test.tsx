@@ -9,6 +9,7 @@ import type { TellyDb } from '@/core/db/tellyDb';
 import { MemoryKeyValueStore } from '@/core/kv/memoryKeyValueStore';
 import { RefreshGate } from '@/core/refresh/refreshGate';
 import { SettingsContext } from '@/core/settings/settingsContext';
+import { TellySettings } from '@/core/settings/tellySettings';
 import { SettingsRepository } from '@/core/settings/settingsRepository';
 import { channelImport, freshDb, programImport } from '@/test/dbFixtures';
 import { useEpgRefresh } from './useEpgRefresh';
@@ -80,16 +81,19 @@ describe('EPG hooks', () => {
       </SettingsContext>
     );
     const { result } = renderHook(() => useEpgRefresh(overrides), { wrapper });
-    // First emission = start state: the never-fetched playlist is due.
-    await waitFor(() => expect(refreshSource).toHaveBeenCalledTimes(1));
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // The first emission is the baseline (app start runs the due policy elsewhere): no fetch.
+    await act(async () => {
+      await result.current.mutateAsync('due');
+    });
+    expect(refreshSource).toHaveBeenCalledTimes(1);
     // The refresher's own stamp write must not retrigger.
     await act(async () => {
       await playlists.markEpgUpdated(1, 99);
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(refreshSource).toHaveBeenCalledTimes(1);
-    // A new EPG URL does; the fresh stamp keeps it not-due at interval None, so nothing is fetched...
+    // A new EPG URL is an EPG-relevant change: with "update on playlists change" OFF the due
+    // policy runs (fresh stamp → nothing fetched)...
     await act(async () => {
       await playlists.add(
         'http://p',
@@ -100,12 +104,23 @@ describe('EPG hooks', () => {
     });
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(refreshSource).toHaveBeenCalledTimes(1);
-    // ...until "Update EPG" forces every source.
+    // ...with it ON the change force-fetches every source.
+    settings.set(TellySettings.EPG_UPDATE_ON_PLAYLISTS_CHANGE, true);
+    await act(async () => {
+      await playlists.add(
+        'http://p',
+        { epgUrl: 'http://e/3.xml', channels: [], vodItems: [] },
+        null,
+        () => 3,
+      );
+    });
+    await waitFor(() => expect(refreshSource).toHaveBeenCalledTimes(2));
+    expect(refreshSource).toHaveBeenLastCalledWith('http://e/3.xml');
+    // "Update EPG" forces every source regardless.
     await act(async () => {
       await result.current.mutateAsync('all');
     });
-    expect(refreshSource).toHaveBeenCalledTimes(2);
-    expect(refreshSource).toHaveBeenLastCalledWith('http://e/2.xml');
+    expect(refreshSource).toHaveBeenCalledTimes(3);
     await act(async () => {
       expect(await result.current.mutateAsync('due')).toEqual([]);
     });

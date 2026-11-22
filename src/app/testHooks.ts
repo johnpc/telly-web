@@ -4,9 +4,13 @@ import { TellySettings } from '@/core/settings/tellySettings';
 import { createEpgRefresher } from '@/features/epg/epgWiring';
 import { importPlaylist } from '@/features/playlist/channelImporter';
 import { fetchPlaylistText } from '@/features/playlist/playlistFetcher';
+import {
+  type OnboardingTestHooks,
+  createOnboardingTestHooks,
+} from '@/features/onboarding/onboardingTestHooks';
 
 /** Test seams exposed on `window.telly` when the page is opened with `?e2e=1` or in dev. */
-export interface TellyTestHooks {
+export interface TellyTestHooks extends OnboardingTestHooks {
   completeSetup(playlistUrl: string): Promise<void>;
   setSetting(key: string, value: string): void;
   channelCount(): Promise<number>;
@@ -24,7 +28,7 @@ export function createTestHooks(settings: SettingsRepository): TellyTestHooks {
       const text = await fetchPlaylistText(playlistUrl, {
         proxyBase: settings.get(TellySettings.CORS_PROXY),
       });
-      await importPlaylist(playlistUrl, text);
+      await importPlaylist(playlistUrl, text, { name: new URL(playlistUrl).hostname });
       await createEpgRefresher(settings).refreshAllNow();
     },
     setSetting(key, value) {
@@ -32,6 +36,7 @@ export function createTestHooks(settings: SettingsRepository): TellyTestHooks {
     },
     channelCount: () => channelRepository.totalCount(),
     now: () => Date.now(),
+    ...createOnboardingTestHooks(settings),
   };
 }
 

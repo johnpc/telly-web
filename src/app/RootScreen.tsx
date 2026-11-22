@@ -4,6 +4,8 @@ import { RemoteKeysProvider } from '@/core/input/RemoteKeysProvider';
 import { useNavigator } from '@/core/navigation/useNavigator';
 import { useRoute } from '@/core/navigation/useRoute';
 import { SoftRemote } from '@/core/ui/SoftRemote';
+import { RemindersHost } from '@/features/reminders';
+import { useApplyAppearance, useConfigAutoBackup } from '@/features/settings';
 import { ExitedScreen } from './ExitedScreen';
 import { screenFor } from './screens';
 import { useBackgroundRefresh } from './useBackgroundRefresh';
@@ -16,7 +18,11 @@ export function RootScreen(): JSX.Element {
   const [exited, setExited] = useState(false);
   useStartRoute();
   useBackgroundRefresh();
+  useApplyAppearance();
+  useConfigAutoBackup();
   const onBack = (): void => {
+    // A BACK before the start route resolves must not count as "exit".
+    if (route.kind === 'Boot') return;
     if (!navigator.pop()) setExited(true);
   };
   const restart = (): void => {
@@ -30,6 +36,7 @@ export function RootScreen(): JSX.Element {
           {exited ? <ExitedScreen onRestart={restart} /> : screenFor(route)}
         </div>
       </FocusScope>
+      <RemindersHost />
       <SoftRemote />
     </RemoteKeysProvider>
   );

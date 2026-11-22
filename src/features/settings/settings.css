@@ -1,0 +1,5 @@
+/* Settings rows render in Roboto Condensed like the Android wizard's actions. */
+.font-condensed {
+  font-family: 'Roboto Condensed', 'Roboto', system-ui, sans-serif;
+  font-stretch: condensed;
+}

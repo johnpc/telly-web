@@ -1,0 +1,5 @@
+# Reminders
+
+| Machine  | States                                                                                                                                                     | Owner                                                                               | Status   | Tests                                                                                         |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------- |
+| Reminder | `ReminderDue.State` PENDING · DUE · EXPIRED, then FIRED as a PERSISTED claim (`firedAtMs`, guarded update) before the popup — a crash can never fire twice | `src/features/reminders/reminderDue.ts`, `src/features/reminders/reminderEngine.ts` | explicit | `src/features/reminders/reminderDue.test.ts`, `src/features/reminders/reminderEngine.test.ts` |

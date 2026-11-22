@@ -39,7 +39,7 @@ describe('parseXmltv', () => {
       displayName: 'News One',
       iconUrl: 'http://127.0.0.1:8090/logos/news-one.png',
     });
-    expect(doc.programs).toHaveLength(931);
+    expect(doc.programs).toHaveLength(930);
     const withEpisode = doc.programs.find((p) => p.details.episode !== null);
     expect(withEpisode?.details).toMatchObject({
       title: 'Weather Watch',
@@ -52,7 +52,7 @@ describe('parseXmltv', () => {
     expect(first).toMatchObject({
       channelId: 'news-one-1.fixture',
       startMs: FIXTURE_ANCHOR_MS - 6 * 3600e3,
-      endMs: FIXTURE_ANCHOR_MS - 6 * 3600e3 + 75 * 60e3,
+      endMs: FIXTURE_ANCHOR_MS - 6 * 3600e3 + 90 * 60e3,
     });
   });
 

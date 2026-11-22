@@ -1,6 +1,6 @@
 import { byFavoriteOrder, byNumber, byZapOrder, isVisible } from './channelOrder';
 import { type ChannelImport, replaceChannelsForPlaylist } from './channelReplace';
-import { type TellyDb, tellyDb } from './tellyDb';
+import { type TellyDb, VISIBILITY_EPOCH_KEY, tellyDb } from './tellyDb';
 import { type ChannelFlags, type ChannelOverrides, type ChannelRow, epgId } from './types';
 
 /** One row of the guide's group list: a group name plus its channel count. */
@@ -22,8 +22,32 @@ function countByGroup(rows: readonly ChannelRow[]): Map<string | null, number> {
 }
 
 /** Persistence for channels; queries shaped like Android's `ChannelDao` + `ChannelOptionsDao`. */
+/**
+ * Android `PlaylistGroupFilter`: drops the channels of disabled playlist groups
+ * from the visible feed. Ungrouped channels and unknown playlists stay visible.
+ */
+export type GroupEnabled = (playlistUrl: string, group: string) => boolean;
+
+export function filterByEnabledGroups(
+  channels: ChannelRow[],
+  playlistUrlById: ReadonlyMap<number, string>,
+  groupEnabled: GroupEnabled,
+): ChannelRow[] {
+  return channels.filter((channel) => {
+    const url = playlistUrlById.get(channel.playlistId);
+    return channel.groupTitle === null || url === undefined || groupEnabled(url, channel.groupTitle);
+  });
+}
+
 export class ChannelRepository {
+  private groupEnabled: GroupEnabled = () => true;
+
   constructor(private readonly db: TellyDb = tellyDb) {}
+
+  /** Installs the settings-backed "Manage groups" predicate (the app shell does this once). */
+  setGroupFilter(groupEnabled: GroupEnabled): void {
+    this.groupEnabled = groupEnabled;
+  }
 
   /** Every channel of a playlist, hidden included, in number order. */
   async forPlaylist(playlistId: number): Promise<ChannelRow[]> {
@@ -45,9 +69,13 @@ export class ChannelRepository {
     return [...countByGroup(visible)].map(([groupTitle, channelCount]) => ({ groupTitle, channelCount }));
   }
 
-  /** All visible channels across playlists in "All channels" zap order. */
+  /** All visible channels across playlists in "All channels" zap order (disabled groups dropped). */
   async visible(): Promise<ChannelRow[]> {
-    return (await this.db.channels.toArray()).filter(isVisible).sort(byZapOrder);
+    // Reading the epoch row registers a live-query dependency so a Manage-groups change re-runs it.
+    await this.db.meta.get(VISIBILITY_EPOCH_KEY);
+    const urls = new Map((await this.db.playlists.toArray()).map((p) => [p.id, p.url] as const));
+    const rows = (await this.db.channels.toArray()).filter(isVisible).sort(byZapOrder);
+    return filterByEnabledGroups(rows, urls, this.groupEnabled);
   }
 
   /** EVERY channel, hidden included — the bulk visibility/blocking editors. */

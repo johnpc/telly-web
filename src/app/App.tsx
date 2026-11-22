@@ -6,12 +6,14 @@ import { AppDepsContext } from './appContext';
 import { RootScreen } from './RootScreen';
 import { StartRoute } from './startRoute';
 import { installTestHooks } from './testHooks';
+import { installGroupVisibility } from '@/features/playlist/groupVisibility';
 import { TellySettings } from '@/core/settings/tellySettings';
 
 export function App(): JSX.Element {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: 1 } } }));
   const [deps] = useState(() => {
     installTestHooks(defaultSettingsRepository);
+    installGroupVisibility(defaultSettingsRepository);
     return {
       startRoute: new StartRoute(() => defaultSettingsRepository.get(TellySettings.LAST_CHANNEL_ON_START)),
     };

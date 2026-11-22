@@ -5,6 +5,11 @@ import type { Setting } from './setting';
 export class SettingsRepository {
   constructor(private readonly store: KeyValueStore) {}
 
+  /** The stored encoding of `key` (null when unset) — a cheap, referentially stable change key. */
+  raw(key: string): string | null {
+    return this.store.get(key);
+  }
+
   get<T>(setting: Setting<T>): T {
     const raw = this.store.get(setting.key);
     return raw === null ? setting.default : setting.decode(raw);

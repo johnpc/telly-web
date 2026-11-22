@@ -44,3 +44,16 @@ describe('useSetting', () => {
     localStorage.clear();
   });
 });
+
+it('returns a referentially stable Set for stringSet settings until the raw value changes', () => {
+  const repository = new SettingsRepository(new MemoryKeyValueStore());
+  const { result, rerender } = renderHook(() =>
+    useSettingValue(repository, TellySettings.PARENTAL_LOCKED_GROUPS),
+  );
+  const first = result.current;
+  rerender();
+  expect(result.current).toBe(first);
+  act(() => repository.set(TellySettings.PARENTAL_LOCKED_GROUPS, new Set(['News'])));
+  expect(result.current).not.toBe(first);
+  expect([...result.current]).toEqual(['News']);
+});
