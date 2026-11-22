@@ -30,3 +30,9 @@ tested · `implicit` = known gap, listed so nobody re-discovers it.
 | Reconnect budget  | attempt 0..6 with backoff 1→30 s                                          | `src/core/player/reconnectPolicy.ts` | explicit | `src/core/player/reconnectPolicy.test.ts` |
 
 <!-- Feature slices append their rows below as they land (same names as the Android catalog). -->
+
+## Slice fragments
+
+Each feature slice keeps its rows in `docs/state-machines/<slice>.md` (same
+table columns, same machine names as the Android catalog). The gate reads
+this file plus every fragment.

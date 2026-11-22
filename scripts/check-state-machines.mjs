@@ -2,11 +2,23 @@
 // Gate: docs/state-machines.md is live. Every `owner`/`tests` path it cites
 // exists, every `explicit` row's owner carries a `@stateMachine('<row>')`
 // marker comment, and every marker in src/ has a row.
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { ROOT, walkSourceFiles } from './lib/ts-source.mjs';
 
-const doc = readFileSync(join(ROOT, 'docs', 'state-machines.md'), 'utf8');
+// The catalog is docs/state-machines.md plus one fragment per slice under
+// docs/state-machines/<slice>.md (so parallel slices never edit one file).
+const FRAGMENTS = join(ROOT, 'docs', 'state-machines');
+const doc = [
+  join(ROOT, 'docs', 'state-machines.md'),
+  ...(existsSync(FRAGMENTS)
+    ? readdirSync(FRAGMENTS)
+        .filter((f) => f.endsWith('.md'))
+        .map((f) => join(FRAGMENTS, f))
+    : []),
+]
+  .map((p) => readFileSync(p, 'utf8'))
+  .join('\n');
 const rows = [
   ...doc.matchAll(
     /^\|\s*([^|]+?)\s*\|[^|]*\|\s*([^|]*?)\s*\|\s*(explicit|guarded|implicit)\s*\|\s*([^|]*?)\s*\|$/gm,

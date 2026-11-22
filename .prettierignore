@@ -6,3 +6,5 @@ e2e/fixtures/site
 playwright-report
 test-results
 package-lock.json
+e2e/fixtures/streams
+e2e/fixtures/logos

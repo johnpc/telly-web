@@ -1,0 +1,76 @@
+@catch-up
+Feature: Catch-up playback of already-aired programmes
+  Channels can declare catch-up on their #EXTINF line (catchup /
+  catchup-source / catchup-days). On such a channel a past programme in the
+  guide is playable: OK plays the archived broadcast fullscreen with a seek
+  transport, and BACK returns to the guide (ux-spec §2.10/§3.17). The
+  fixture playlist marks "News One" catch-up-enabled (2 days); "News One
+  HD" has the same deep-past EPG but no catch-up, so its past cells only
+  offer the regular long-OK cell dropdown (no archive "Play").
+
+  Background:
+    Given the fixture playlist and EPG are served from "http://127.0.0.1:8090"
+    And I completed the add-playlist wizard
+    And I press back
+
+  Scenario: A past programme on a catch-up channel plays from the guide with a seek transport
+    When I long-press dpad left
+    Then the guide shows yesterday's programme on channel 1
+    When I press ok
+    Then catch-up playback starts for yesterday's programme on channel 1
+    And the seek transport shows the position readout
+    When I press fast-forward
+    Then the seek transport shows the position readout
+    When I return from catch-up playback
+    Then the TV guide opens with the programme grid
+
+  # Catch-up mode is derived from what the tuner plays: a live tune that
+  # bypasses the zap overlay (the sheet's Hide channel zaps away) leaves it too.
+  Scenario: Hiding the channel during catch-up returns to live playback
+    When I long-press dpad left
+    Then the guide shows yesterday's programme on channel 1
+    When I press ok
+    Then catch-up playback starts for yesterday's programme on channel 1
+    When I open the channel panel
+    And I long-press ok on the row "News One"
+    And I select "Hide channel"
+    Then live playback of channel 2 "News One HD" replaces the catch-up transport
+
+  Scenario: Pause pins the transport and resume releases it
+    When I long-press dpad left
+    Then the guide shows yesterday's programme on channel 1
+    When I press ok
+    Then catch-up playback starts for yesterday's programme on channel 1
+    When I activate the catch-up transport "Pause" button
+    Then catch-up playback is paused with the transport pinned
+    When I activate the catch-up transport "Resume" button
+    Then the seek transport shows the position readout
+
+  Scenario: Previous and next hop between neighbouring archived programmes
+    When I long-press dpad left
+    Then the guide shows yesterday's programme on channel 1
+    When I press ok
+    Then catch-up playback starts for yesterday's programme on channel 1
+    When I activate the catch-up transport "Previous programme" button
+    Then catch-up playback shows the programme before yesterday's on channel 1
+    When I activate the catch-up transport "Next programme" button
+    Then catch-up playback starts for yesterday's programme on channel 1
+
+  Scenario: A finished archive returns to live playback of the same channel
+    When I long-press dpad left
+    Then the guide shows yesterday's programme on channel 1
+    When I press ok
+    Then catch-up playback starts for yesterday's programme on channel 1
+    When I press fast-forward
+    And I press fast-forward
+    Then the archive ends and live playback of channel 1 resumes
+
+  Scenario: A past programme on a channel without catch-up only offers the premium dropdown
+    When I long-press dpad left
+    And I press dpad down
+    Then the guide shows yesterday's programme on channel 2
+    When I long-press ok
+    Then a dropdown anchored under the cell lists exactly "Play channel", "Remind", "Record", "Custom recording", "Add to My list", "Program description"
+    And the dropdown offers no "Play" action
+    When I press back
+    Then the programme grid is focused again
