@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/quality.sh --fast
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+
+  acceptance:
+    name: Acceptance (${{ matrix.feature }})
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # One entry per e2e feature area (= the leading @tag of each .feature).
+        # scripts/check-feature-coverage.mjs enforces that every
+        # e2e/features/**/*.feature file is listed here.
+        feature:
+          [
+            add-playlist,
+            epg-data,
+            watch-and-zap,
+            channel-panel,
+            settings,
+            tv-guide,
+            search,
+            reminders,
+            my-list,
+            vod,
+            recording,
+            block-channel,
+            catch-up,
+          ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run build
+      - name: Run Gherkin acceptance (@${{ matrix.feature }})
+        run: npx bddgen && npx playwright test
+        env:
+          E2E_TAG: ${{ matrix.feature }}
+      - name: Upload acceptance artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: acceptance-${{ matrix.feature }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore

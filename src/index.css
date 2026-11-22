@@ -1,0 +1,76 @@
+@import 'tailwindcss';
+
+/* Design tokens — the same values as the Android app's core/design/Tokens.kt
+   (sampled from TiviMate reference captures). Keep both files in step. */
+@theme {
+  --color-telly-background: #0e1116;
+  --color-telly-surface: #161b22;
+  --color-telly-accent: #2ec4b6;
+  --color-telly-text: #f5f7fa;
+  --color-telly-text-secondary: #8b949e;
+  --color-telly-onboarding-bg: #131619;
+  --color-telly-guidance-pane: #232629;
+  --color-telly-focus-fill: #dee0e2;
+  --color-telly-focus-text: #000000;
+  --color-telly-button-resting: #272a2d;
+  --color-telly-text-muted: #a7a8a9;
+  --color-telly-text-disabled: #4d5052;
+  --color-telly-text-faint: #5d5f61;
+  --color-telly-text-faint-focused: #6f7071;
+  --color-telly-text-guidance-muted: #919394;
+  --color-telly-pane-divider: #222527;
+  --color-telly-field-underline: #3d4042;
+  --color-telly-error: #e57373;
+  --color-telly-playback-accent: var(--telly-accent, #2196f3);
+  --color-telly-clock-blue: #90caf9;
+  --color-telly-overlay-card: #181e20;
+  --color-telly-overlay-card-focused: #252a2d;
+  --color-telly-progress-track: #666666;
+  --color-telly-dash-fill: #b7b9bc;
+  --color-telly-menu-sheet: #1b1d21;
+  --color-telly-badge-fill: rgb(0 0 0 / 0.4);
+  --color-telly-badge-text: #9fa1a3;
+  --color-telly-logo-tile: #2c5f8a;
+  --color-telly-logo-focus-border: #2e5b81;
+  --color-telly-guide-cell: #1b1e21;
+  --color-telly-now-line: #384c5c;
+  --color-telly-guide-cell-selected: #424547;
+  --color-telly-guide-toast: #b5b7b9;
+  --color-telly-settings-header: #333639;
+  --color-telly-settings-focus-fill: #e0e2e4;
+  --color-telly-accent-blue: #2196f3;
+  --font-sans: 'Roboto', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+:root {
+  /* Settings → Appearance → Color theme writes --telly-accent; Font size writes --telly-font-scale. */
+  --telly-accent: #2196f3;
+  --telly-font-scale: 1;
+  font-size: calc(16px * var(--telly-font-scale));
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Focus is drawn by the components (TiviMate-style fills), never by the UA ring. */
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: none;
+}
+
+video::-webkit-media-controls {
+  display: none !important;
+}

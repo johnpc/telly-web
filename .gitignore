@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-ssr
+coverage
+*.local
+.DS_Store
+logs
+*.log
+npm-debug.log*
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/.features-gen/
+/e2e/fixtures/site/
+/artifacts/
+.vite

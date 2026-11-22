@@ -1,0 +1,8 @@
+dist
+coverage
+node_modules
+e2e/fixtures/site
+.features-gen
+playwright-report
+test-results
+package-lock.json
