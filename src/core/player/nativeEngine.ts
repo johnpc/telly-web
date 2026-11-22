@@ -1,0 +1,60 @@
+// Bare `<video src>` transport: MP4 / WebM progressive files and HLS on
+// browsers with native HLS but no MSE (Safari on iPhone). Errors arrive via
+// the element's `error` event, which `videoEvents.ts` already maps, so this
+// transport is nearly inert. The element's `audioTracks` / `textTracks`
+// collections are Safari-only and shape-shift across engines, so native
+// playback exposes no pickers (the Android app shows none for MP4 either).
+import type { LoadOptions } from './PlayerEngine';
+import { NO_TRACKS, type TrackSnapshot } from './trackModels';
+import type { Transport, TransportListener } from './transport';
+
+export class NativeTransport implements Transport {
+  readonly kind = 'native';
+  readonly tracks: TrackSnapshot = NO_TRACKS;
+  private video: HTMLVideoElement | null = null;
+  private onMetadata: (() => void) | null = null;
+
+  load(
+    video: HTMLVideoElement,
+    url: string,
+    options: LoadOptions,
+    listener: TransportListener,
+  ): Promise<void> {
+    this.stop();
+    this.video = video;
+    if (options.startPositionMs !== undefined && options.startPositionMs > 0) {
+      const startSeconds = options.startPositionMs / 1000;
+      this.onMetadata = () => {
+        video.currentTime = startSeconds;
+      };
+      video.addEventListener('loadedmetadata', this.onMetadata, { once: true });
+    }
+    video.src = url;
+    video.load();
+    listener.onTracksChanged(NO_TRACKS);
+    listener.onDetails({ width: video.videoWidth, height: video.videoHeight });
+    return Promise.resolve();
+  }
+
+  stop(): void {
+    const video = this.video;
+    this.video = null;
+    if (video === null) return;
+    if (this.onMetadata !== null) video.removeEventListener('loadedmetadata', this.onMetadata);
+    this.onMetadata = null;
+    video.removeAttribute('src');
+    video.load();
+  }
+
+  selectVideo(): void {
+    return undefined;
+  }
+
+  selectAudio(): void {
+    return undefined;
+  }
+
+  selectText(): void {
+    return undefined;
+  }
+}

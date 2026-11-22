@@ -11,7 +11,7 @@ export default tseslint.config(
       'dist',
       'coverage',
       'node_modules',
-      'e2e/fixtures/site',
+      'e2e/fixtures/**',
       '.features-gen',
       'playwright-report',
       'test-results',
@@ -38,6 +38,6 @@ export default tseslint.config(
   },
   {
     files: ['**/*.test.{ts,tsx}', 'e2e/**/*.ts'],
-    rules: { '@typescript-eslint/explicit-function-return-type': 'off' },
+    rules: { '@typescript-eslint/explicit-function-return-type': 'off', 'react-hooks/rules-of-hooks': 'off' },
   },
 );

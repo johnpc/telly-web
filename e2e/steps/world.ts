@@ -5,7 +5,7 @@ import { test as base, expect, type Page } from '@playwright/test';
 
 export const FIXTURE_HOST = 'http://127.0.0.1:8090';
 
-export type TellyWorld = {
+export interface TellyWorld {
   page: Page;
   /** Loads the app with a clean profile (IndexedDB + localStorage wiped). */
   freshInstall(): Promise<void>;
@@ -21,7 +21,7 @@ export type TellyWorld = {
   seeText(text: string): Promise<void>;
   notSeeText(text: string): Promise<void>;
   seedSetup(playlistUrl?: string): Promise<void>;
-};
+}
 
 export type RemotePress =
   | 'ArrowUp'

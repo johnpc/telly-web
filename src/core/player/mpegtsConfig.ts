@@ -1,0 +1,46 @@
+// Pure mpegts.js configuration + mapping, kept out of the transport so it
+// tests flat: the live/file decision, the player config, the MEDIA_INFO →
+// badge mapping and the error-message shape.
+import type Mpegts from 'mpegts.js';
+import type { LoadOptions } from './PlayerEngine';
+import type { StreamDetails } from './streamDetails';
+import type { UrlProbe } from './urlProbe';
+
+/** Live only when the caller says live AND the server streams without a length. */
+export function isLivePipe(options: LoadOptions, probe: UrlProbe): boolean {
+  return options.live && probe.contentLength === null;
+}
+
+/** Worker demux, no lazy-load pause (a file streams like a channel), latency chasing only for live pipes. */
+export function mpegtsConfig(isLive: boolean): Mpegts.Config {
+  return {
+    enableWorker: true,
+    lazyLoad: false,
+    isLive,
+    liveBufferLatencyChasing: isLive,
+    liveBufferLatencyMaxLatency: 3,
+    liveBufferLatencyMinRemain: 1,
+    autoCleanupSourceBuffer: true,
+  };
+}
+
+/** `MEDIA_INFO` → the badge facts (fps and channel count come from the codec headers). */
+export function detailsOf(info: Mpegts.MSEPlayerMediaInfo): Partial<StreamDetails> {
+  const channels: unknown = info['audioChannelCount'];
+  return {
+    width: info.width ?? 0,
+    height: info.height ?? 0,
+    frameRate: info.fps ?? 0,
+    audioChannels: typeof channels === 'number' ? channels : 0,
+  };
+}
+
+export interface MpegtsErrorInfo {
+  msg?: string;
+}
+
+/** `type/detail: msg` — mpegts.js reports errors as three loose arguments. */
+export function mpegtsErrorMessage(type: string, detail: string, info?: MpegtsErrorInfo): string {
+  const suffix = info?.msg === undefined ? '' : `: ${info.msg}`;
+  return `${type}/${detail}${suffix}`;
+}
