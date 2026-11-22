@@ -15,3 +15,5 @@ npm-debug.log*
 /e2e/fixtures/site/
 /artifacts/
 .vite
+.scratch
+/e2e/fixtures/site-unit/

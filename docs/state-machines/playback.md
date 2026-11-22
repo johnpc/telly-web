@@ -1,0 +1,6 @@
+# Playback
+
+| Machine           | States                                                                                           | Owner                                                                                                          | Status   | Tests                                               |
+| ----------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| Tuned stream      | null · Live(channel) · Archive(channel, url) · External(channel)                                 | `src/features/playback/tune/tunedStream.ts` (published only by `src/features/playback/tune/tuneController.ts`) | explicit | `src/features/playback/tune/tuneController.test.ts` |
+| Catch-up hand-off | Empty · Stashed(channelId, url) — a gated archive tune is replayed by the verified PIN's re-tune | `src/features/playback/tune/pendingCatchup.ts`                                                                 | guarded  | `src/features/playback/tune/tuneController.test.ts` |

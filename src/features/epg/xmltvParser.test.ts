@@ -1,6 +1,6 @@
 import { gzipSync, strToU8 } from 'fflate';
 import { describe, expect, it } from 'vitest';
-import { fixture, fixtureText } from '@/test/fixtureSite';
+import { FIXTURE_ANCHOR_MS, fixture, fixtureText } from '@/test/fixtureSite';
 import { episodeDisplay } from './xmltvEpisodeNum';
 import { decodeXmltvBytes, parseXmltv, parseXmltvBytes } from './xmltvParser';
 import { parseXmltvMs } from './xmltvTimestamp';
@@ -39,7 +39,7 @@ describe('parseXmltv', () => {
       displayName: 'News One',
       iconUrl: 'http://127.0.0.1:8090/logos/news-one.png',
     });
-    expect(doc.programs).toHaveLength(937);
+    expect(doc.programs).toHaveLength(931);
     const withEpisode = doc.programs.find((p) => p.details.episode !== null);
     expect(withEpisode?.details).toMatchObject({
       title: 'Weather Watch',
@@ -51,8 +51,8 @@ describe('parseXmltv', () => {
     const first = doc.programs[0];
     expect(first).toMatchObject({
       channelId: 'news-one-1.fixture',
-      startMs: Date.UTC(2026, 10, 22, 14, 30),
-      endMs: Date.UTC(2026, 10, 22, 15, 45),
+      startMs: FIXTURE_ANCHOR_MS - 6 * 3600e3,
+      endMs: FIXTURE_ANCHOR_MS - 6 * 3600e3 + 75 * 60e3,
     });
   });
 

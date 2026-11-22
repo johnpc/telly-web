@@ -26,9 +26,9 @@ describe('refreshEpgSource', () => {
       programs,
       trace: (m) => trace.push(m),
     });
-    expect(await refreshEpgSource('http://e/epg.xml.gz', deps)).toBe(937);
-    expect(await programs.count()).toBe(937);
-    expect(trace[1]).toContain('parsed 937 programmes');
+    expect(await refreshEpgSource('http://e/epg.xml.gz', deps)).toBe(931);
+    expect(await programs.count()).toBe(931);
+    expect(trace[1]).toContain('parsed 931 programmes');
     const newsOneRows = (await programs.window(['news-one-1.fixture'], 0, Number.MAX_SAFE_INTEGER)).length;
     // A second document for one channel replaces only that channel's rows.
     const xml = `<tv><programme start="20260101000000 +0000" stop="20260101010000 +0000" channel="news-one-1.fixture">
@@ -38,7 +38,7 @@ describe('refreshEpgSource', () => {
     const rows = await programs.window(['news-one-1.fixture'], 0, Number.MAX_SAFE_INTEGER);
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ title: 'Alt', description: null });
-    expect(await programs.count()).toBe(937 - newsOneRows + 1);
+    expect(await programs.count()).toBe(931 - newsOneRows + 1);
   });
 
   it('maps documents to rows, honouring the descriptions toggle', () => {
