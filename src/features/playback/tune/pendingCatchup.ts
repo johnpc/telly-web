@@ -11,12 +11,12 @@ export class PendingCatchup {
   }
 
   consume(channelId: number, explicit: string | null): string | null {
-    if (explicit !== null) {
-      this.stashed = null;
-      return explicit;
-    }
     const hit = this.stashed;
     this.stashed = null;
-    return hit !== null && hit.channelId === channelId ? hit.url : null;
+    return explicit ?? this.replayFor(hit, channelId);
+  }
+
+  private replayFor(hit: { channelId: number; url: string } | null, channelId: number): string | null {
+    return hit?.channelId === channelId ? hit.url : null;
   }
 }

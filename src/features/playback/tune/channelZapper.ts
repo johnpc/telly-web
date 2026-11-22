@@ -1,5 +1,10 @@
 import type { ChannelRow } from '@/core/db/types';
 
+/** Euclidean modulo: `index + delta` wrapped into `[0, size)`. */
+function wrap(index: number, delta: number, size: number): number {
+  return (((index + delta) % size) + size) % size;
+}
+
 /** Pure channel-adjacency math: restore-on-start and wrap-around zapping. */
 export const ChannelZapper = {
   /** The last-watched channel if it still exists, else the first channel. */
@@ -9,10 +14,8 @@ export const ChannelZapper = {
 
   /** The channel `delta` steps from `current` in "All channels" order, wrapping at both ends. */
   neighbour(channels: readonly ChannelRow[], current: ChannelRow | null, delta: number): ChannelRow | null {
-    if (channels.length === 0) return null;
     const index = channels.findIndex((c) => c.id === current?.id);
-    if (index < 0) return channels[0] ?? null;
-    const size = channels.length;
-    return channels[(((index + delta) % size) + size) % size] ?? null;
+    const target = index < 0 ? 0 : wrap(index, delta, channels.length);
+    return channels[target] ?? null;
   },
 };

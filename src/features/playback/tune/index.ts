@@ -16,4 +16,4 @@ export {
   defaultTunePolicies,
 } from './tunePolicies';
 export { type PlaybackDeps, HISTORY_CAP, createPlaybackDeps, playbackDeps } from './playbackDeps';
-export { type PlaybackSession, usePlaybackSession } from './usePlaybackSession';
+export { type PlaybackSession, usePlaybackSession, useTunedStream } from './usePlaybackSession';

@@ -84,13 +84,19 @@ export class TuneController {
     if (this.policies.gate.intercept(channel)) return this.pendingCatchup.stash(channel.id, catchupUrl);
     const archiveUrl = this.pendingCatchup.consume(channel.id, catchupUrl);
     this.deps.store.set(LAST_CHANNEL_KEY, String(channel.id));
-    if (archiveUrl !== null) {
-      this.tuned.publish({ kind: 'Archive', channel, url: archiveUrl });
-      return this.deps.engine.load(archiveUrl, { live: false });
-    }
+    if (archiveUrl !== null) return this.playArchive(channel, archiveUrl);
     void this.deps.recordWatch(channel);
+    this.playLive(channel, options.allowExternal ?? true);
+  }
+
+  private playArchive(channel: ChannelRow, url: string): void {
+    this.tuned.publish({ kind: 'Archive', channel, url });
+    this.deps.engine.load(url, { live: false });
+  }
+
+  private playLive(channel: ChannelRow, allowExternal: boolean): void {
     const liveUrl = this.policies.resolveUrl(channel.streamUrl);
-    if ((options.allowExternal ?? true) && this.policies.external.handsOff(channel, liveUrl)) {
+    if (allowExternal && this.policies.external.handsOff(channel, liveUrl)) {
       this.tuned.publish({ kind: 'External', channel });
       return this.deps.engine.stop();
     }
@@ -112,9 +118,7 @@ export class TuneController {
     return this.current?.id === next.id;
   }
 
-  byId(channelId: number): ChannelRow | null {
-    return this.list.find((c) => c.id === channelId) ?? null;
-  }
+  byId = (channelId: number): ChannelRow | null => this.list.find((c) => c.id === channelId) ?? null;
 
   /** Retunes to the next channel when `channel` is about to disappear. */
   zapAwayFrom(channel: ChannelRow): void {
