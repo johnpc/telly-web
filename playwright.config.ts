@@ -40,6 +40,12 @@ export default defineConfig({
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },
-    { command: 'npx vite preview', port: 4173, reuseExistingServer: !process.env.CI, timeout: 60_000 },
+    {
+      // CI serves the production build; locally the dev server reflects live edits and is shared by parallel runs.
+      command: process.env.CI ? 'npx vite preview' : 'npx vite --port 4173 --strictPort',
+      port: 4173,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
   ],
 });
