@@ -31,7 +31,7 @@ export function OverlayScaffold({ group, clockText, style, testId, children }: S
     <div className="absolute inset-0" data-testid={testId}>
       <TopScrim group={group} clockText={clockText} style={style} />
       <div
-        className="absolute inset-x-0 bottom-0 flex flex-col pt-[8rem]"
+        className="absolute inset-x-0 bottom-0 flex flex-col pt-[22rem]"
         style={{ background: `linear-gradient(transparent, rgba(0,0,0,${0.8 * style.alphaFactor}))` }}
       >
         {children}
