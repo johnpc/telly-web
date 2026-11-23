@@ -7,7 +7,7 @@ import { TellySettings } from '@/core/settings/tellySettings';
 import { tellyDb } from '@/core/db/tellyDb';
 import { channelImport } from '@/test/dbFixtures';
 import { MINUTE_MS } from './reminderDue';
-import { SharedTicks, createRemindersHub } from './remindersHub';
+import { createRemindersHub } from './remindersHub';
 
 describe('remindersHub', () => {
   beforeEach(() => vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] }));
@@ -15,21 +15,6 @@ describe('remindersHub', () => {
     vi.useRealTimers();
     await tellyDb.reminders.clear();
     await tellyDb.channels.clear();
-  });
-
-  it('shares one running ticker across hosts', () => {
-    const stop = vi.fn();
-    const begin = vi.fn(() => stop);
-    const ticks = new SharedTicks(begin);
-    const releaseA = ticks.start();
-    const releaseB = ticks.start();
-    expect(begin).toHaveBeenCalledTimes(1);
-    expect(ticks.active).toBe(true);
-    releaseA();
-    expect(stop).not.toHaveBeenCalled();
-    releaseB();
-    expect(stop).toHaveBeenCalledTimes(1);
-    expect(ticks.active).toBe(false);
   });
 
   it('fires a due reminder into the popup with the channel display name, honoring the lead setting', async () => {

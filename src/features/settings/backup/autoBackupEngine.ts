@@ -3,6 +3,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { playlistRepository } from '@/core/db/playlistRepository';
 import type { SettingsRepository } from '@/core/settings/settingsRepository';
 import { useSettingsRepository } from '@/core/settings/settingsContext';
+import { SharedResource } from '@/core/state/sharedResource';
 import { TellySettings } from '@/core/settings/tellySettings';
 import { writeAutoBackup } from './autoBackupFile';
 import { AutoBackupState, type AutoBackupStatus } from './autoBackupState';
@@ -47,8 +48,19 @@ export function startAutoBackup(
   };
 }
 
-let mounts = 0;
-let stopShared: (() => void) | null = null;
+/** One running backup watcher per settings store (the core `Shared resource lease`), shared by every mount. */
+const watchers = new WeakMap<SettingsRepository, SharedResource<() => void>>();
+
+function watcherFor(settings: SettingsRepository): SharedResource<() => void> {
+  const existing = watchers.get(settings);
+  if (existing !== undefined) return existing;
+  const created = new SharedResource(
+    () => startAutoBackup(settings),
+    (stop) => stop(),
+  );
+  watchers.set(settings, created);
+  return created;
+}
 
 /**
  * Mounts the automatic backup for the component's lifetime. Ref-counted so
@@ -56,17 +68,7 @@ let stopShared: (() => void) | null = null;
  */
 export function useConfigAutoBackup(): void {
   const settings = useSettingsRepository();
-  useEffect(() => {
-    mounts += 1;
-    stopShared ??= startAutoBackup(settings);
-    return () => {
-      mounts -= 1;
-      if (mounts === 0) {
-        stopShared?.();
-        stopShared = null;
-      }
-    };
-  }, [settings]);
+  useEffect(() => watcherFor(settings).acquire().release, [settings]);
 }
 
 /** The live "last export" status for the General pane's row summary. */

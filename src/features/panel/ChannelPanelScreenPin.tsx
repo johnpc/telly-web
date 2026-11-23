@@ -1,12 +1,12 @@
 import type { JSX } from 'react';
 import { Focusable } from '@/core/focus/Focusable';
 import { useFocusable } from '@/core/focus/useFocusable';
-import type { PinEntry } from '@/features/playback/gate/pinEntry';
+import type { PinWheel } from '@/core/ui/pinEntry';
 
 interface PinScreenProps {
   title: string;
   keyboard: boolean;
-  entry: PinEntry;
+  entry: PinWheel;
   typed: string;
   onTyped(raw: string): void;
 }

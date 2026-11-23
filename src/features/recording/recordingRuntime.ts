@@ -1,7 +1,7 @@
 import { programTitle } from '@/features/epg/nowNext';
 import { offsetsOfMinutes, queryFrom, shifted } from '@/features/epg/epgOffsets';
 import { type GuideQueryDeps, defaultGuideDeps } from '@/features/epg/useProgramsInRange';
-import { SharedTicks } from '@/features/reminders/remindersHub';
+import { SharedResource } from '@/core/state/sharedResource';
 import { defaultFetch } from './captureContext';
 import { captureExtensionOf } from './hlsRecorder';
 import { RecordingCenter, type RecordingProgrammes } from './recordingCenter';
@@ -41,16 +41,15 @@ export function createRecordingRuntime(clock: () => number = () => Date.now()): 
     clock,
     extensionOf: (url) => captureExtensionOf(url, { fetch: defaultFetch }),
   });
-  // A failed recovery sweep is logged, never a crash; the schedule is watched regardless.
-  const ticks = new SharedTicks(() => {
-    let stop: (() => void) | null = null;
-    center.start().then(
-      (stopTicks) => (stop = stopTicks),
-      (error: unknown) => console.warn('recording runtime failed to start', error),
-    );
-    return () => stop?.();
-  });
-  return { center, start: ticks.start };
+  // The scheduler's lifecycle is the core `Shared resource lease` (Free · Starting · Held · Stopping):
+  // a host released during the asynchronous recovery sweep cancels the start instead of leaking a
+  // second scheduler; a failed sweep is logged, never a crash.
+  const ticks = new SharedResource(
+    () => center.start(),
+    (stopTicks) => stopTicks(),
+    (error: unknown) => console.warn('recording runtime failed to start', error),
+  );
+  return { center, start: () => ticks.acquire().release };
 }
 
 export const recordingRuntime: RecordingRuntime = createRecordingRuntime();

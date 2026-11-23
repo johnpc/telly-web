@@ -83,7 +83,7 @@ describe('useLeasedEngine', () => {
     expect(engines.leaseCount).toBe(0);
   });
 
-  it('the holder takes exactly one lease per subscriber set and notifies on take', () => {
+  it('the holder takes exactly one engine lease per subscriber set and notifies each subscriber', () => {
     const engines = new SharedPlayerEngine(() => new FakeShared());
     const holder = new LeaseHolder(engines);
     const a = vi.fn();
@@ -91,8 +91,9 @@ describe('useLeasedEngine', () => {
     expect(holder.getSnapshot()).toBeNull();
     const unsubA = holder.subscribe(a);
     const unsubB = holder.subscribe(b);
-    expect(a).toHaveBeenCalledTimes(1);
-    expect(b).not.toHaveBeenCalled();
+    expect(a).toHaveBeenCalled();
+    expect(b).toHaveBeenCalled();
+    expect(holder.getSnapshot()).not.toBeNull();
     expect(engines.leaseCount).toBe(1);
     unsubA();
     expect(engines.leaseCount).toBe(1);

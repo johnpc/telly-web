@@ -1,3 +1,5 @@
+import type { KeyQueue } from '@/core/input/keyQueue';
+import { useHoldKeys, useReplayHeldKeys } from '@/core/input/useKeyQueue';
 import type { JSX } from 'react';
 import type { PlaybackSession } from '@/features/playback/tune';
 import type { CustomGroup } from '@/features/groups/customGroups';
@@ -16,8 +18,6 @@ import { useGuideKeys } from './useGuideKeys';
 import { useGuideNow } from './useGuideNow';
 import { useGuideRows } from './useGuideRows';
 import { useGuideStyle } from './useGuideStyle';
-import type { KeyQueue } from './keyQueue';
-import { useReplayQueuedKeys } from './useKeyQueue';
 
 interface FrameProps {
   controller: GuideController;
@@ -84,8 +84,9 @@ export function GuideBodyScreen({
   const custom = useCustomGroups();
   const rows = useGuideRows(controller, session.channels, custom);
   useGuideNow(controller);
-  useGuideKeys(controller, queue);
-  useReplayQueuedKeys(queue, controller.loaded);
+  useGuideKeys(controller);
+  useHoldKeys(queue);
+  useReplayHeldKeys(queue, controller.loaded);
   const style = useGuideStyle();
   return (
     <GuideFrameScreen controller={controller} session={session} rows={rows} custom={custom} style={style} />

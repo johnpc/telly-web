@@ -1,35 +1,31 @@
+import { SharedResource } from '@/core/state/sharedResource';
+import { SubscriberLease } from '@/core/state/subscriberLease';
 import type { VodPlaybackViewModel } from './vodPlaybackViewModel';
 
 /**
- * One ViewModel per subscriber set (the `LeaseHolder` idiom): built and
- * started on the first subscribe, released on the last unsubscribe — so the
- * screen's own engine lives exactly as long as the screen is on, and React's
- * StrictMode double-subscribe just builds a second, clean visit.
+ * One ViewModel per subscriber set (the core `Shared resource lease` behind a
+ * `useSyncExternalStore` source): built and started on the first subscribe,
+ * released on the last unsubscribe — so the screen's own engine lives exactly
+ * as long as the screen is on, and React's StrictMode double-subscribe is just
+ * two overlapping leases on one visit.
  */
 export class VodPlaybackHolder {
-  private viewModel: VodPlaybackViewModel | null = null;
-  private readonly listeners = new Set<() => void>();
+  private readonly lease: SubscriberLease<VodPlaybackViewModel>;
 
-  constructor(private readonly create: () => VodPlaybackViewModel) {}
-
-  readonly subscribe = (listener: () => void): (() => void) => {
-    this.listeners.add(listener);
-    if (this.viewModel === null) this.open();
-    return () => this.close(listener);
-  };
-
-  readonly getSnapshot = (): VodPlaybackViewModel | null => this.viewModel;
-
-  private open(): void {
-    const created = this.create();
-    this.viewModel = created;
-    void created.start();
+  constructor(create: () => VodPlaybackViewModel) {
+    this.lease = new SubscriberLease(
+      new SharedResource(
+        () => {
+          const created = create();
+          void created.start();
+          return created;
+        },
+        (viewModel) => viewModel.release(),
+      ),
+    );
   }
 
-  private close(listener: () => void): void {
-    this.listeners.delete(listener);
-    if (this.listeners.size > 0) return;
-    this.viewModel?.release();
-    this.viewModel = null;
-  }
+  readonly subscribe = (listener: () => void): (() => void) => this.lease.subscribe(listener);
+
+  readonly getSnapshot = (): VodPlaybackViewModel | null => this.lease.getSnapshot();
 }

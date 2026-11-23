@@ -27,7 +27,6 @@ import { useGuideKeys } from './useGuideKeys';
 import { useGuideNow } from './useGuideNow';
 import { useGuideRows } from './useGuideRows';
 import { useGuideStyle } from './useGuideStyle';
-import { KeyQueue } from './keyQueue';
 import { ORIGIN, channel as fixtureChannel, row } from './testFixtures';
 
 function session(tuner: TuneController): PlaybackSession {
@@ -121,12 +120,11 @@ describe('useGuideNow / useGuideHint / useGuideStyle', () => {
 });
 
 describe('useGuideKeys', () => {
-  it('parks keys until the first rows land, then routes them through the controller', async () => {
+  it('routes keys through the controller once the first rows land', async () => {
     const harness = await makeHarness();
     const router = new KeyRouter({ moveFocus: () => false, activate: () => false, back: () => undefined });
-    const queue = new KeyQueue();
     function Probe(): null {
-      useGuideKeys(harness.controller, queue);
+      useGuideKeys(harness.controller);
       return null;
     }
     render(
@@ -135,9 +133,8 @@ describe('useGuideKeys', () => {
       </KeyRouterContext>,
     );
     expect(router.depth).toBe(1);
-    expect(router.dispatch('UP')).toBe(true);
-    expect(queue.size).toBe(1);
     expect(harness.controller.loaded).toBe(false);
+    expect(harness.controller.rows).toEqual([]);
     harness.controller.setRows([row(fixtureChannel(1), ORIGIN, 2)]);
     expect(harness.controller.loaded).toBe(true);
     expect(router.dispatch('BACK')).toBe(true);
@@ -154,7 +151,7 @@ describe('useGuideKeys', () => {
     const router = new KeyRouter({ moveFocus: () => false, activate: () => false, back });
     harness.controller.setRows([]);
     function Probe(): null {
-      useGuideKeys(harness.controller, new KeyQueue(), focus);
+      useGuideKeys(harness.controller, focus);
       return null;
     }
     render(

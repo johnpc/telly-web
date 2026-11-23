@@ -5,48 +5,28 @@
 // pane, a DOWN opens a hold queue that is replayed in order the moment the
 // results arrive — the DOWN then lands on the fresh landing / remembered node
 // via the bar's focus override, the rest move from there.
-import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { useCallback, useState } from 'react';
 import { useFocusedId } from '@/core/focus/useFocusedId';
-import type { KeyRouter } from '@/core/input/keyRouter';
-import { useKeyRouter } from '@/core/input/keyRouterContext';
-import { useKeyHandler } from '@/core/input/useKeyHandler';
+import { type KeyHold, KeyQueue } from '@/core/input/keyQueue';
 import { isDirection, type RemoteKey } from '@/core/input/remoteKeys';
+import { useHoldKeys, useReplayHeldKeys } from '@/core/input/useKeyQueue';
 import { SEARCH_IDS } from './searchIds';
 import type { SearchResultsModel } from './useSearchResults';
 
-/** True when `key` must wait: a search is pending and a DOWN from the bar opened (or continues) the hold. */
-export function holdsKey(
-  key: RemoteKey,
-  pending: boolean,
-  focusedId: string | null,
-  queued: number,
-): boolean {
-  if (!pending || !isDirection(key)) return false;
-  return queued > 0 || (key === 'DOWN' && focusedId === SEARCH_IDS.query);
+/** True when `key` must wait: the hold is open (a search is pending) and a DOWN from the bar opened (or continues) it. */
+export function holdsKey(key: RemoteKey, focusedId: string | null, hold: KeyHold): boolean {
+  if (hold.kind !== 'Holding' || !isDirection(key)) return false;
+  return hold.keys.length > 0 || (key === 'DOWN' && focusedId === SEARCH_IDS.query);
 }
 
+/** The shared `Startup key hold`: Holding while results are pending, replayed one per commit when they land. */
 export function useDeferredDown(model: SearchResultsModel): void {
-  const queue = useRef<RemoteKey[]>([]);
+  const [queue] = useState(() => new KeyQueue());
   const focusedId = useFocusedId();
-  const onKey = useCallback(
-    (key: RemoteKey): boolean => {
-      if (!holdsKey(key, model.pending, focusedId, queue.current.length)) return false;
-      queue.current.push(key);
-      return true;
-    },
-    [focusedId, model.pending],
+  const holds = useCallback(
+    (key: RemoteKey): boolean => holdsKey(key, focusedId, queue.state),
+    [focusedId, queue],
   );
-  useKeyHandler(onKey);
-  useReplayWhenLanded(queue, model.pending);
-}
-
-/** Replays the held keys, in order, once the results for the typed query are on screen. */
-function useReplayWhenLanded(queueRef: RefObject<RemoteKey[]>, pending: boolean): void {
-  const router: KeyRouter = useKeyRouter();
-  useEffect(() => {
-    if (pending) return;
-    const held = queueRef.current;
-    queueRef.current = [];
-    for (const key of held) router.dispatch(key);
-  }, [queueRef, router, pending]);
+  useHoldKeys(queue, holds);
+  useReplayHeldKeys(queue, !model.pending);
 }

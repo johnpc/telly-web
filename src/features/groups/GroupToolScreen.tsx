@@ -19,7 +19,7 @@ export function GroupToolScreen({ session }: { session: GroupToolSession }): JSX
     <ToolPaneScreen scopeId="guide-group-tool" title={ui.title} testId="group-tool">
       {ui.pin ? (
         <div className="p-[1.5em]">
-          <PinEntryScreen focusId="group-tool-pin" onSubmit={(pin) => void session.submitPin(pin)} />
+          <PinEntryScreen focusId="group-tool-pin" onSubmit={(pin) => session.submitPin(pin)} />
         </div>
       ) : ui.textInitial !== null ? (
         <div className="p-[1.5em]">

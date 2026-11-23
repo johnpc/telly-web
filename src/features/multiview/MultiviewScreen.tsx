@@ -83,7 +83,7 @@ function Gate({ view }: { view: MultiviewView }): JSX.Element | null {
     <PinPrompt
       title="Enter PIN"
       keyboard={vm.gate.keyboardPin}
-      onSubmit={(pin) => void vm.gate.submit(pin)}
+      onSubmit={(pin) => vm.gate.submit(pin)}
       onDismiss={() => vm.onBack()}
     />
   );

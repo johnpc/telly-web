@@ -7,6 +7,8 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import type { PlayerEngine } from './PlayerEngine';
 import type { EngineState } from './engineState';
+import { SharedResource } from '@/core/state/sharedResource';
+import { SubscriberLease } from '@/core/state/subscriberLease';
 import type { Lease, Releasable, SharedPlayerEngine } from './sharedPlayerEngine';
 
 export function useEngineState(engine: PlayerEngine): EngineState {
@@ -35,32 +37,22 @@ export function usePlayerEngine(engine: PlayerEngine): PlayerEngineView {
   return { engine, state: useEngineState(engine), paused: useEnginePaused(engine) };
 }
 
-/** One lease per subscriber set: acquired on first subscribe, released on last unsubscribe. */
+/** One engine lease per subscriber set: acquired on the first subscribe, released on the last unsubscribe. */
 export class LeaseHolder<T extends Releasable> {
-  private lease: Lease<T> | null = null;
-  private readonly listeners = new Set<() => void>();
+  private readonly leases: SubscriberLease<Lease<T>>;
 
-  constructor(private readonly engines: SharedPlayerEngine<T>) {}
-
-  readonly subscribe = (listener: () => void): (() => void) => {
-    this.listeners.add(listener);
-    if (this.lease === null) this.take();
-    return () => this.drop(listener);
-  };
-
-  readonly getSnapshot = (): T | null => this.lease?.engine ?? null;
-
-  private take(): void {
-    this.lease = this.engines.acquire();
-    for (const notify of this.listeners) notify();
+  constructor(engines: SharedPlayerEngine<T>) {
+    this.leases = new SubscriberLease(
+      new SharedResource(
+        () => engines.acquire(),
+        (lease) => lease.release(),
+      ),
+    );
   }
 
-  private drop(listener: () => void): void {
-    this.listeners.delete(listener);
-    if (this.listeners.size > 0) return;
-    this.lease?.release();
-    this.lease = null;
-  }
+  readonly subscribe = (listener: () => void): (() => void) => this.leases.subscribe(listener);
+
+  readonly getSnapshot = (): T | null => this.leases.getSnapshot()?.engine ?? null;
 }
 
 /** The shared engine, or null on the very first render before the lease is taken. */

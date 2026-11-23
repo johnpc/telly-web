@@ -1,7 +1,6 @@
-import { type JSX, useCallback, useState } from 'react';
-import { isDirection, type RemoteKey } from '@/core/input/remoteKeys';
-import { useKeyHandler } from '@/core/input/useKeyHandler';
-import { EMPTY_PIN_ENTRY, type PinEntry, pinCommit, pinDown, pinLeft, pinRight, pinUp } from './pinEntry';
+import { type JSX, useCallback } from 'react';
+import { pinView } from '@/core/ui/pinEntry';
+import { usePinEntry, type PinEntryHandlers } from '@/core/ui/usePinEntry';
 import { PinKeyboardScreen } from './SettingsPinKeyboardScreen';
 import type { SettingsController } from './settingsController';
 import { submitPin, submitVerifyPin } from './settingsOverlayResults';
@@ -16,23 +15,19 @@ interface PinProps {
   overlay: PinOverlay;
 }
 
-const SPIN: Readonly<Record<string, (entry: PinEntry) => PinEntry>> = {
-  UP: pinUp,
-  DOWN: pinDown,
-  LEFT: pinLeft,
-  RIGHT: pinRight,
-};
-
 /**
  * PIN setup/change ("Change PIN") and verify ("Enter PIN") dialogs: the entry
  * style follows the persisted "PIN input method" — four digit wheels
  * (UP/DOWN spins, LEFT/RIGHT moves, OK commits) or the masked 4-digit
- * keyboard entry that commits on the fourth digit. Same verify semantics.
+ * keyboard entry that commits on the fourth digit — one shared `PIN entry` machine.
  */
 export function SettingsPinScreen({ controller, overlay }: PinProps): JSX.Element {
   const keyboard = useKeyboardPin(controller);
   const commit = overlay.kind === 'PinSetup' ? submitPin : submitVerifyPin;
-  const onSubmit = useCallback((pin: string): void => void commit(controller, pin), [commit, controller]);
+  const onSubmit = useCallback(
+    (pin: string): Promise<unknown> => commit(controller, pin),
+    [commit, controller],
+  );
   return (
     <SettingsSheetFrameScreen title={overlay.kind === 'PinSetup' ? 'Change PIN' : 'Enter PIN'}>
       <div className="px-12 pt-6">
@@ -42,17 +37,9 @@ export function SettingsPinScreen({ controller, overlay }: PinProps): JSX.Elemen
   );
 }
 
-function PinWheel({ onSubmit }: { onSubmit: (pin: string) => void }): JSX.Element {
-  const [entry, setEntry] = useState<PinEntry>(EMPTY_PIN_ENTRY);
-  useKeyHandler((key: RemoteKey): boolean => {
-    if (key === 'OK') {
-      setEntry((current) => pinCommit(current, onSubmit));
-      return true;
-    }
-    if (!isDirection(key)) return false;
-    setEntry((current) => SPIN[key]?.(current) ?? current);
-    return true;
-  });
+function PinWheel({ onSubmit }: { onSubmit: PinEntryHandlers['onSubmit'] }): JSX.Element {
+  const { state } = usePinEntry({ onSubmit, keyboard: false });
+  const entry = pinView(state).wheel;
   return (
     <div className="flex gap-6" data-testid="pin-wheel" role="group" aria-label="PIN">
       {entry.digits.map((digit, index) => {

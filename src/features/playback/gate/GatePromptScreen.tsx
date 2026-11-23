@@ -27,7 +27,7 @@ export function GatePrompt({ tuner, onUnlocked, gate = playbackGate }: GatePromp
     <PinPrompt
       title="Enter PIN"
       keyboard={gate.gate.keyboardPin}
-      onSubmit={(pin) => void prompt.submit(pin)}
+      onSubmit={(pin) => prompt.submit(pin)}
       onDismiss={() => prompt.dismiss()}
     />
   );

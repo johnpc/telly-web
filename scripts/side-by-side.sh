@@ -26,7 +26,11 @@ export E2E_PORT="${E2E_PORT:-4174}" E2E_PREVIEW=1
 [ -d dist ] || npx vite build >/dev/null
 E2E_TAG="$AREA" E2E_VIDEO=1 npx bddgen >/dev/null
 E2E_TAG="$AREA" E2E_VIDEO=1 npx playwright test --output "$OUT/web-results" ${GREP:+-g "$GREP"} || echo "(web scenarios failed — recording kept)"
-find "$OUT/web-results" -name '*.webm' -exec cp {} "$OUT/web/" \;
+# Every scenario records a `video.webm`; copy them in execution (mtime) order under unique names.
+i=0
+for f in $(find "$OUT/web-results" -name '*.webm' -print0 | xargs -0 ls -tr); do
+  i=$((i+1)); cp "$f" "$OUT/web/$(printf '%03d' $i).webm"
+done
 
 step "android: sync tree + run @$AREA on the mini with screenrecord"
 rsync -az --delete --exclude build --exclude .gradle --exclude '*/build' --exclude .git \

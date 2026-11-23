@@ -33,7 +33,7 @@ export default defineConfig({
     baseURL: `http://127.0.0.1:${PORT}`,
     viewport: { width: 1920, height: 1080 },
     hasTouch: false,
-    video: process.env.E2E_VIDEO ? 'on' : 'retain-on-failure',
+    video: process.env.E2E_VIDEO ? { mode: 'on', size: { width: 1920, height: 1080 } } : 'retain-on-failure',
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
     launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] },

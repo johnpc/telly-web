@@ -50,7 +50,7 @@ function Pushed({
         <PinPrompt
           title={overlay.mode}
           keyboard={playbackGate.gate.keyboardPin}
-          onSubmit={(pin) => void ctl.menu.submitBlockPin(pin)}
+          onSubmit={(pin) => ctl.menu.submitBlockPin(pin)}
           onDismiss={back}
         />
       );

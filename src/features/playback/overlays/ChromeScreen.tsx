@@ -18,7 +18,7 @@ function Pills({ view, ctl }: { view: PlaybackView; ctl: PlaybackController }): 
         <PinPrompt
           title="Enter PIN"
           keyboard={playbackGate.gate.keyboardPin}
-          onSubmit={(pin) => void ctl.prompt.submit(pin)}
+          onSubmit={(pin) => ctl.prompt.submit(pin)}
           onDismiss={() => ctl.prompt.dismiss()}
         />
       )}

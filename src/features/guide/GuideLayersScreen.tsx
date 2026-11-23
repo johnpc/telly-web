@@ -43,10 +43,7 @@ export function GuideLayersScreen({ controller }: { controller: GuideController 
       return (
         <ToolPaneScreen scopeId="guide-pin" title={layer.mode} testId="guide-pin">
           <div className="p-[1.5em]">
-            <PinEntryScreen
-              focusId="guide-block-pin"
-              onSubmit={(pin) => void controller.parts.submitPin(pin)}
-            />
+            <PinEntryScreen focusId="guide-block-pin" onSubmit={(pin) => controller.parts.submitPin(pin)} />
           </div>
         </ToolPaneScreen>
       );
@@ -54,10 +51,7 @@ export function GuideLayersScreen({ controller }: { controller: GuideController 
       return (
         <ToolPaneScreen scopeId="guide-pin" title="Enter PIN" testId="guide-pin">
           <div className="p-[1.5em]">
-            <PinEntryScreen
-              focusId="guide-group-pin"
-              onSubmit={(pin) => void controller.parts.submitPin(pin)}
-            />
+            <PinEntryScreen focusId="guide-group-pin" onSubmit={(pin) => controller.parts.submitPin(pin)} />
           </div>
         </ToolPaneScreen>
       );

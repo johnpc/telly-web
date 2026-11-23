@@ -1,6 +1,8 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { RemoteKey } from '@/core/input/remoteKeys';
+import { KeyQueue } from '@/core/input/keyQueue';
 import { useKeyHandler } from '@/core/input/useKeyHandler';
+import { useHoldKeys, useReplayHeldKeys } from '@/core/input/useKeyQueue';
 import { useNavigator } from '@/core/navigation/useNavigator';
 import type { PlayerEngine } from '@/core/player';
 import { useSettingsRepository } from '@/core/settings/settingsContext';
@@ -15,7 +17,6 @@ import { createPlaybackController, type PlaybackController } from './playbackCon
 import { applyResizeMode } from './resizeModeSetting';
 import type { PlaybackSession } from './tune/usePlaybackSession';
 import { usePlaybackStart } from './usePlaybackStart';
-import { type KeyBuffer, useReplayKeys } from './useStartupKeys';
 
 /** PIP: mirror the element's window events; entering from ANY path drops the overlay. */
 function usePipWiring(engine: PlayerEngine, pip: PipState, ctl: PlaybackController): void {
@@ -39,13 +40,12 @@ function useResizeMode(engine: PlayerEngine): void {
  * Assembles the fullscreen-playback controller for the screen's lifetime and
  * wires it to the key router, page visibility, PIP and the cold-start tune.
  */
-const NO_KEYS: KeyBuffer = { current: [] };
-
 export function usePlaybackController(
   session: PlaybackSession,
   pip: PipState = sharedPipState,
-  heldKeys: KeyBuffer = NO_KEYS,
+  heldKeys?: KeyQueue,
 ): PlaybackController {
+  const [queue] = useState(() => heldKeys ?? new KeyQueue());
   const navigator = useNavigator();
   const settings = useSettingsRepository();
   const { tuner, engine } = session;
@@ -63,10 +63,11 @@ export function usePlaybackController(
     [tuner, engine, navigator, settings, pip],
   );
   useKeyHandler((key: RemoteKey) => ctl.onKey(key));
+  useHoldKeys(queue);
+  useReplayHeldKeys(queue, session.channels.length > 0);
   useVisibilitySuspend(ctl.lifecycle);
   usePlaybackStart(tuner, session.channels, () => ctl.catchup.resumePending());
   useEffect(() => ctl.catchup.watch(), [ctl]);
-  useReplayKeys(heldKeys, session.channels.length > 0, ctl.onKey);
   usePipWiring(engine, pip, ctl);
   useResizeMode(engine);
   return ctl;

@@ -5,6 +5,7 @@
 import { channelRepository } from '@/core/db/channelRepository';
 import { reminderRepository } from '@/core/db/reminderRepository';
 import { type ReminderRow, displayName } from '@/core/db/types';
+import { SharedResource } from '@/core/state/sharedResource';
 import { defaultSettingsRepository } from '@/core/settings/settingsContext';
 import type { SettingsRepository } from '@/core/settings/settingsRepository';
 import { TellySettings } from '@/core/settings/tellySettings';
@@ -28,31 +29,6 @@ function showDue(popup: ReminderPopupController): (reminder: ReminderRow) => voi
   };
 }
 
-/** Refcounted start/stop so several hosts share one running ticker. */
-export class SharedTicks {
-  private running = 0;
-  private stop: (() => void) | null = null;
-
-  constructor(private readonly begin: () => () => void) {}
-
-  readonly start = (): (() => void) => {
-    this.running += 1;
-    this.stop ??= this.begin();
-    return () => this.release();
-  };
-
-  get active(): boolean {
-    return this.stop !== null;
-  }
-
-  private release(): void {
-    this.running -= 1;
-    if (this.running > 0) return;
-    this.stop?.();
-    this.stop = null;
-  }
-}
-
 export function createRemindersHub(
   settings: SettingsRepository = defaultSettingsRepository,
   ticker: TickerDeps = defaultTickerDeps,
@@ -63,14 +39,17 @@ export function createRemindersHub(
     onDue: showDue(popup),
     store: reminderRepository,
   });
-  const ticks = new SharedTicks(() =>
-    startReminderTicks(
-      () => engine.tick(),
-      (rows) => engine.sweep(rows),
-      ticker,
-    ),
+  // The core `Shared resource lease`: one running ticker while any host holds it.
+  const ticks = new SharedResource(
+    () =>
+      startReminderTicks(
+        () => engine.tick(),
+        (rows) => engine.sweep(rows),
+        ticker,
+      ),
+    (stop) => stop(),
   );
-  return { popup, engine, start: ticks.start };
+  return { popup, engine, start: () => ticks.acquire().release };
 }
 
 export const remindersHub: RemindersHub = createRemindersHub();

@@ -16,6 +16,8 @@ import { scrollFloorDp } from './guideWindowMath';
 import type { GuideControllerDeps } from './guideWiring';
 import { Observable } from './observable';
 
+const NO_ROWS: readonly GuideRow[] = [];
+
 export type { GuideControllerDeps } from './guideWiring';
 
 /**
@@ -31,11 +33,11 @@ export class GuideController extends Observable {
   readonly exit = new ExitConfirm();
   readonly groupMemory: GuideGroupMemory;
   readonly parts: GuideParts;
-  private list: readonly GuideRow[] = [];
+  /** null until the first rows emission (keys before that are held and replayed). */
+  private list: readonly GuideRow[] | null = null;
   private custom: readonly CustomGroup[] = [];
   private nowMs: number;
   private resumePending: boolean;
-  private rowsLoaded = false;
 
   constructor(readonly deps: GuideControllerDeps) {
     super();
@@ -45,7 +47,7 @@ export class GuideController extends Observable {
     const visibleRows = (): number => visibleRowsOf(deps);
     this.engine = new GuideFocusEngine(this.originMs, () => scrollFloorDp(pastDaysOf(deps)), visibleRows);
     this.groupMemory = new GuideGroupMemory(deps.store);
-    const focusMemory = new GuideFocusMemory(this.engine, visibleRows, () => this.list);
+    const focusMemory = new GuideFocusMemory(this.engine, visibleRows, () => this.rows);
     this.menu = new GuideMenuController({
       focusedRow: () => this.focusedRow(),
       focusMemory,
@@ -57,7 +59,7 @@ export class GuideController extends Observable {
   }
 
   get rows(): readonly GuideRow[] {
-    return this.list;
+    return this.list ?? NO_ROWS;
   }
 
   get customGroups(): readonly CustomGroup[] {
@@ -76,9 +78,9 @@ export class GuideController extends Observable {
     return this.groupMemory.value;
   }
 
-  /** True once the first rows emission landed (keys before that are parked and replayed). */
+  /** True once the first rows emission landed (the `Startup key hold` replays on it). */
   get loaded(): boolean {
-    return this.rowsLoaded;
+    return this.list !== null;
   }
 
   setNow(nowMs: number): void {
@@ -93,7 +95,6 @@ export class GuideController extends Observable {
   /** Every rows emission re-resolves focus; the first non-empty one may seed the last-tuned row (BACK from fullscreen). */
   setRows(rows: readonly GuideRow[]): void {
     this.list = rows;
-    this.rowsLoaded = true;
     if (this.resumePending && rows.length > 0) resumeFocus(this, this.deps, rows);
     this.resumePending = this.resumePending && rows.length === 0;
     this.engine.ensureFocus(rows, this.nowMs);
@@ -117,7 +118,7 @@ export class GuideController extends Observable {
 
   focusedRow(): GuideRow | undefined {
     const focus = this.engine.focus;
-    return focus === null ? undefined : this.list[focus.rowIndex];
+    return focus === null ? undefined : this.rows[focus.rowIndex];
   }
 
   dispose(): void {
