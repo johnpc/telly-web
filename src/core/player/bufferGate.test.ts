@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { BufferGate, attachBufferGate, bufferedAhead, thresholdsFor } from './bufferGate';
+import { BufferGate, attachBufferGate, bufferedAhead, bufferedToEnd, thresholdsFor } from './bufferGate';
 import { defineReadOnly, fakeTimeRanges, fire, stubMediaPlayback } from './testSupport';
 
 function video(ahead: number, currentTime = 10): HTMLVideoElement {
@@ -97,5 +97,22 @@ describe('bufferGate', () => {
     detach();
     fire(v, 'timeupdate');
     expect(gate.current.kind).toBe('Holding');
+  });
+
+  it('a finite file buffered to its end plays out even below the runway', () => {
+    const v = video(0.4, 29);
+    defineReadOnly(v, 'duration', 29.5);
+    defineReadOnly(v, 'paused', false);
+    expect(bufferedToEnd(v)).toBe(true);
+    const gate = new BufferGate(v, thresholdsFor('Small'));
+    gate.onPlay();
+    expect(gate.current.kind).toBe('Playing');
+    gate.onWaiting();
+    expect(gate.current.kind).toBe('Holding');
+    gate.onProgress();
+    expect(gate.current.kind).toBe('Playing');
+    const live = video(0.4);
+    defineReadOnly(live, 'duration', Number.POSITIVE_INFINITY);
+    expect(bufferedToEnd(live)).toBe(false);
   });
 });

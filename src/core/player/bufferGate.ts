@@ -44,6 +44,13 @@ export function bufferedAhead(video: HTMLVideoElement): number {
   return 0;
 }
 
+/** A finite file whose buffer reaches its end has all the runway there is (the archive must be allowed to finish). */
+export function bufferedToEnd(video: HTMLVideoElement): boolean {
+  const { duration, buffered } = video;
+  if (!Number.isFinite(duration) || buffered.length === 0) return false;
+  return buffered.end(buffered.length - 1) >= duration - 0.3;
+}
+
 export class BufferGate {
   private state: GateState;
   private ownPause = false;
@@ -90,7 +97,7 @@ export class BufferGate {
   private check(): void {
     const s = this.state;
     if (s.kind !== 'Starting' && s.kind !== 'Holding') return;
-    if (bufferedAhead(this.video) < s.need) return this.hold(s);
+    if (bufferedAhead(this.video) < s.need && !bufferedToEnd(this.video)) return this.hold(s);
     this.state = { kind: 'Playing' };
     safePlay(this.video);
   }
