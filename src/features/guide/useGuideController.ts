@@ -29,11 +29,16 @@ export function useGuideController(session: PlaybackSession): GuideController {
   return controller;
 }
 
-/** The guide is reached from playback with the last channel still playing; a cold untuned start stays dark. */
+/**
+ * Android `resumeStored` on every guide build that may tune: the engine skips a
+ * URL it is already streaming (seamless hand-over from fullscreen), while a
+ * rebuilt engine (released after a Search round trip) re-tunes instead of
+ * sitting black. A cold untuned start (`tunesPreview` false) stays dark.
+ */
 function useResumePreview(controller: GuideController, session: PlaybackSession): void {
   const ready = session.channels.length > 0;
   useEffect(() => {
     const { tuner, tunesPreview } = controller.deps;
-    if (ready && tunesPreview && tuner.current === null) tuner.resumeStored();
+    if (ready && tunesPreview) tuner.resumeStored();
   }, [controller, ready]);
 }

@@ -88,7 +88,10 @@ describe('capabilities + engine construction', () => {
     const shared = createSharedEngine({ ticker: null, telemetry: null });
     const lease = shared.acquire();
     expect(lease.engine.video?.dataset.testid).toBe(VIDEO_TESTID);
+    vi.useFakeTimers();
     lease.release();
+    vi.advanceTimersByTime(400);
+    vi.useRealTimers();
     expect(lease.engine.video).toBeNull();
   });
 });

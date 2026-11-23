@@ -66,6 +66,7 @@ class FakeShared {
 
 describe('useLeasedEngine', () => {
   it('leases on mount, hands the same engine to an overlapping mount, frees on the last unmount', () => {
+    vi.useFakeTimers();
     let builds = 0;
     const engines = new SharedPlayerEngine(() => {
       builds += 1;
@@ -79,8 +80,11 @@ describe('useLeasedEngine', () => {
     first.unmount();
     expect(second.result.current?.released).toBe(false);
     second.unmount();
-    expect(second.result.current?.released).toBe(true);
     expect(engines.leaseCount).toBe(0);
+    // The release grace keeps the engine briefly for a screen taking over; nobody does here.
+    vi.advanceTimersByTime(400);
+    expect(second.result.current?.released).toBe(true);
+    vi.useRealTimers();
   });
 
   it('the holder takes exactly one engine lease per subscriber set and notifies each subscriber', () => {

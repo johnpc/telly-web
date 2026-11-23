@@ -28,8 +28,20 @@ export function createVideoElement(doc: Document = document): HTMLVideoElement {
 }
 
 /** Appends `video` to `container` unless it already lives there. */
+/**
+ * Re-parents the ONE `<video>` into `container`. A media element that leaves the
+ * document pauses itself (HTML spec), so a stream that was playing is resumed
+ * once it is back in the tree — the guide ↔ fullscreen hand-over must not stall.
+ */
 export function moveVideoTo(video: HTMLVideoElement, container: Element): void {
-  if (video.parentElement !== container) container.appendChild(video);
+  if (video.parentElement === container) return;
+  const wasPlaying = !video.paused && !video.ended;
+  container.appendChild(video);
+  if (wasPlaying || video.paused) resumeIfLive(video);
+}
+
+function resumeIfLive(video: HTMLVideoElement): void {
+  if (video.readyState > 0 && video.currentSrc !== '') safePlay(video);
 }
 
 /** `play()` rejects on autoplay policy; the engine surfaces that via events, not exceptions. */
