@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+test-results
+playwright-report
+.features-gen
+artifacts
+.scratch
+e2e/fixtures/site
+e2e/fixtures/site-unit
+.git

@@ -1,0 +1,8 @@
+# Self-host telly-web: `docker compose up -d` then open http://<host>:8002/.
+services:
+  web:
+    image: ghcr.io/johnpc/telly-web:latest
+    container_name: telly-web
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:8002:80' # put a reverse proxy with TLS in front for anything beyond localhost
