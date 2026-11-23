@@ -1,14 +1,16 @@
 // Engine choice by URL. `.m3u8` → hls.js (or the native element when the
 // browser plays HLS itself and has no MSE — iPhone Safari); `.ts`/MPEG-TS
 // → mpegts.js; `.mp4/.mkv/.webm/.mov` → native; extensionless provider
-// URLs get a HEAD sniff on Content-Type and otherwise default to MPEG-TS,
-// the IPTV norm. The libraries are imported lazily by their transports.
+// URLs get a byte sniff (a ranged GET of the first TS packets, since the
+// Content-Type lies — raw TS arrives as `video/mp4`) and otherwise default
+// to MPEG-TS, the IPTV norm. The libraries are imported lazily by their
+// transports.
 import { HlsTransport } from './hlsEngine';
 import { MpegtsTransport } from './mpegtsEngine';
 import { NativeTransport } from './nativeEngine';
 import { SharedPlayerEngine } from './sharedPlayerEngine';
 import type { Transport, TransportKind } from './transport';
-import { sniffContentType } from './urlProbe';
+import { sniffStream } from './urlProbe';
 import { createVideoElement } from './videoElement';
 import type { EngineDeps } from './engineDeps';
 import { WebPlayerEngine } from './webPlayerEngine';
@@ -65,7 +67,7 @@ export type Sniffer = (url: string) => Promise<string | null>;
 export async function resolveEngineKind(
   url: string,
   caps: EngineCapabilities,
-  sniff: Sniffer = sniffContentType,
+  sniff: Sniffer = sniffStream,
 ): Promise<EngineKind> {
   return engineKindForUrl(url, caps) ?? engineKindForContentType(await sniff(url), caps);
 }

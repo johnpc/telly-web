@@ -1,6 +1,7 @@
 import { programTitle } from '@/features/epg/nowNext';
 import { offsetsOfMinutes, queryFrom, shifted } from '@/features/epg/epgOffsets';
 import { type GuideQueryDeps, defaultGuideDeps } from '@/features/epg/useProgramsInRange';
+import { resolvingFetch, streamUrlResolver } from '@/core/net/streamUrl';
 import { SharedResource } from '@/core/state/sharedResource';
 import { defaultFetch } from './captureContext';
 import { captureExtensionOf } from './hlsRecorder';
@@ -30,7 +31,10 @@ export function airingLookup(deps: GuideQueryDeps = defaultGuideDeps): Recording
 export function createRecordingRuntime(clock: () => number = () => Date.now()): RecordingRuntime {
   const store = new RecordingStore(undefined, clock);
   const files = new RecordingFiles();
-  const engine = new RecordingEngine({ store, files, clock });
+  // Every capture fetch (raw pipe, HLS playlist, segment, container probe) goes through the Stream & CORS
+  // proxy; URL resolution inside HLS playlists stays on the provider's URLs because the rewrite is per request.
+  const fetchImpl = resolvingFetch(streamUrlResolver(), defaultFetch);
+  const engine = new RecordingEngine({ store, files, clock, fetch: fetchImpl });
   const scheduler = new RecordingScheduler(store, engine, clock);
   const center = new RecordingCenter({
     store,
@@ -39,7 +43,7 @@ export function createRecordingRuntime(clock: () => number = () => Date.now()): 
     files,
     programmes: airingLookup(),
     clock,
-    extensionOf: (url) => captureExtensionOf(url, { fetch: defaultFetch }),
+    extensionOf: (url) => captureExtensionOf(url, { fetch: fetchImpl }),
   });
   // The scheduler's lifecycle is the core `Shared resource lease` (Free · Starting · Held · Stopping):
   // a host released during the asynchronous recovery sweep cancels the start instead of leaking a

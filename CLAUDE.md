@@ -56,8 +56,9 @@ touch device a soft D-pad (`SoftRemote`) is offered so parity holds on a phone.
 - **Client state**: Context + hook + provider per feature, in separate files. Logic
   in plain `.ts` (unit-tested); components render JSX only.
 - **Hosting**: static site on GitHub Pages — there is no server. Settings → General →
-  **CORS proxy** is the one web-specific setting: providers that do not send CORS
-  headers can be routed through a proxy URL the user supplies.
+  **Stream & CORS proxy** is the one web-specific setting: playlist, EPG AND stream
+  requests are routed through a proxy URL (`src/core/net/streamUrl.ts`); hosts that
+  ship a proxy at `/proxy/` fill it in by themselves (`Proxy discovery`).
 
 ## Quality gates (all must pass; "fix the code, never the gate")
 
@@ -196,3 +197,27 @@ npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:80
   Manager host (own Let's Encrypt cert), never the Cloudflare proxy (media
   streaming ToS); Homepage lists it first under Favorites. The container has no auth
   and no data: everything the user enters lives in their browser.
+- **2026-11-23** Real provider streams on the web. (1) **The "CORS proxy" setting
+  also routes streams** (row renamed **Stream & CORS proxy**, summary says why):
+  provider URLs like `https://host/<line>/<token>/<id>` 302 to a plain-http host, which
+  an https page cannot follow (mixed content), and most providers send no CORS, so
+  `resolveStreamUrl(url, base)` (`src/core/net/streamUrl.ts`, THE one resolver) wraps
+  every media URL as `${base}${encodeURIComponent(url)}` at every place a URL reaches
+  an engine — live tune and retune, catch-up archive (unlike Android's UDP proxy the
+  archive goes through too), multiview panes, VOD, and every DVR capture fetch
+  (`resolvingFetch` wraps the recorder's `fetch`, so HLS relative URIs still resolve
+  against the provider's playlist URL). Blob / data / same-origin / already-proxied
+  URLs and logos are never proxied; the setting is read live per call. Known gap:
+  hls.js resolves a proxied playlist's RELATIVE segment URIs against the proxy URL, so
+  HLS-through-proxy needs the proxy to rewrite playlist bodies (a proxy-side fix). (2)
+  **Zero config on hosts with a proxy** — `Proxy discovery` (`src/app/proxyDiscovery.ts`,
+  Unknown · Probing · Found(base) · Absent) probes `<origin><BASE_URL>proxy/healthz`
+  once per install when the setting is unset and fills in `<origin><BASE_URL>proxy/?url=`
+  on `200 ok`; `general_cors_proxy_probed` guarantees a value the user set or cleared is
+  never touched again. GitHub Pages (404) and the fixture harness (SPA html) settle as
+  Absent; the probe never delays the start route. (3) **Byte-sniffed container**: the
+  provider labels raw MPEG-TS as `video/mp4`, so extensionless URLs are decided by a
+  ranged GET of the first 8 TS packets (`containerSniff.ts`: `0x47` at a 188-byte stride
+  from any alignment → mpegts.js; `#EXTM3U` → hls.js; `ftyp`/`moov`/`moof` → native),
+  falling back to the Content-Type only for an undecided body. The reader is cancelled
+  after 1504 bytes because a live pipe ignores Range and never ends.

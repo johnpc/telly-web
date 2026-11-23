@@ -36,7 +36,7 @@ describe('runAction', () => {
     c.activate(RowIds.CORS_PROXY);
     expect(c.state.overlay).toMatchObject({
       kind: 'TextEdit',
-      title: 'CORS proxy',
+      title: 'Stream & CORS proxy',
       value: 'http://proxy/?u=',
     });
     c.activate(RowIds.SEARCH_CLEAR_HISTORY);

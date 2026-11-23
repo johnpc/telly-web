@@ -4,7 +4,8 @@ import { boolSetting, intSetting, stringSetSetting, stringSetting } from './sett
  * Every persisted setting, with the defaults captured from TiviMate 5.2.0
  * (port of Android `TellySettings.kt`). Keys and defaults are IDENTICAL to
  * the Android app so a backup file moves between the two apps unchanged.
- * `CORS_PROXY` is the one web-specific key (CLAUDE.md decisions log).
+ * `CORS_PROXY` (+ its `CORS_PROXY_PROBED` marker) are the web-specific keys
+ * (CLAUDE.md decisions log).
  */
 export const TellySettings = {
   // General.
@@ -15,8 +16,10 @@ export const TellySettings = {
   CONFIRM_EXIT: boolSetting('general_confirm_exit', false),
   USER_AGENT: stringSetting('general_user_agent', ''),
   UDP_PROXY: stringSetting('general_udp_proxy', ''),
-  /** Web only: providers without CORS headers are routed through this base URL. */
+  /** Web only: playlist, EPG AND stream requests are routed through this base URL (`src/core/net/streamUrl.ts`). */
   CORS_PROXY: stringSetting('general_cors_proxy', ''),
+  /** Web only: set once `Proxy discovery` has run, so a value the user set or cleared is never probed again. */
+  CORS_PROXY_PROBED: boolSetting('general_cors_proxy_probed', false),
   AUTO_BACKUP: boolSetting('general_auto_backup', true),
 
   // Playlists.

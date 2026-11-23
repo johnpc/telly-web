@@ -7,7 +7,7 @@ import type { ChannelRow } from '@/core/db/types';
 import { RowIds } from '../rowIds';
 import { EMPTY_FEEDS, type SettingsFeeds } from '../settingsFeeds';
 import type { SettingsPane } from '../settingsUiState';
-import { userAgentSummary } from './generalRows';
+import { PROXY_WEB_NOTE, proxySummary, userAgentSummary } from './generalRows';
 import { sizeText } from './otherRows';
 import { epgSourceCountSummary } from './playlistRows';
 import { rowsFor } from './rowsFor';
@@ -74,7 +74,7 @@ describe('rowsFor', () => {
 
   it('renders every section pane with the captured copy', () => {
     expect(titles({ kind: 'Section', section: 'GENERAL' })).toContain('Confirm exit by second press Back');
-    expect(titles({ kind: 'Section', section: 'GENERAL' })).toContain('CORS proxy');
+    expect(titles({ kind: 'Section', section: 'GENERAL' })).toContain('Stream & CORS proxy');
     expect(titles({ kind: 'Section', section: 'PLAYLISTS' }, feeds)).toEqual([
       'alpha',
       'Beta',
@@ -114,6 +114,8 @@ describe('rowsFor', () => {
     expect(general[0]).toMatchObject({ id: RowIds.AUTOSTART_BOOT, locked: true });
     expect(userAgentSummary('')).toBe('Not set');
     expect(userAgentSummary('ua')).toContain('ua');
+    expect(proxySummary('')).toBe(`Not set — ${PROXY_WEB_NOTE}`);
+    expect(proxySummary('https://p/?url=')).toBe(`https://p/?url= — ${PROXY_WEB_NOTE}`);
   });
 
   it('renders the playlist detail, groups, EPG sources and source detail panes', () => {

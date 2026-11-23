@@ -24,7 +24,7 @@ const PUSHED_PANES: Readonly<Record<string, SettingsPane>> = {
 export const TEXT_EDITS: Readonly<Record<string, { title: string; setting: Setting<string> }>> = {
   [RowIds.USER_AGENT]: { title: 'User-Agent', setting: TellySettings.USER_AGENT },
   [RowIds.UDP_PROXY]: { title: 'UDP proxy (address:port)', setting: TellySettings.UDP_PROXY },
-  [RowIds.CORS_PROXY]: { title: 'CORS proxy', setting: TellySettings.CORS_PROXY },
+  [RowIds.CORS_PROXY]: { title: 'Stream & CORS proxy', setting: TellySettings.CORS_PROXY },
 };
 
 /** Rows that open a fixed overlay. */

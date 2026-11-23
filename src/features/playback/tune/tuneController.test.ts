@@ -118,7 +118,7 @@ describe('TuneController', () => {
     open.tuner.start();
     open.tuner.tune(list[1] as ChannelRow, { catchupUrl: 'http://x/arch' });
     expect(open.tuner.playing).toEqual({ kind: 'Archive', channel: list[1], url: 'http://x/arch' });
-    expect(open.engine.load).toHaveBeenLastCalledWith('http://x/arch', { live: false });
+    expect(open.engine.load).toHaveBeenLastCalledWith('http://x/arch?proxied', { live: false });
     expect(open.recordWatch).toHaveBeenCalledTimes(1);
   });
   it('hands off to the external player only for user tunes', () => {

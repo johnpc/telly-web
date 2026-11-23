@@ -3,6 +3,7 @@ import { channelRepository } from '@/core/db/channelRepository';
 import type { ChannelRow } from '@/core/db/types';
 import { watchHistoryRepository } from '@/core/db/watchHistoryRepository';
 import type { KeyValueStore } from '@/core/kv/keyValueStore';
+import { streamUrlResolver } from '@/core/net/streamUrl';
 import { LocalStorageKeyValueStore } from '@/core/kv/localStorageKeyValueStore';
 import {
   type PlayerEngine,
@@ -49,7 +50,8 @@ export function createPlaybackDeps(
       watchHistoryRepository
         .upsert({ channelKey: keyOf(channel), watchedAtMs: Date.now() })
         .then(() => watchHistoryRepository.trimTo(HISTORY_CAP)));
-  const policies = overrides.policies ?? { gate: playbackGate.gate };
+  // `resolveUrl` reads the Stream & CORS proxy setting LIVE on every tune (proxy discovery may land after start).
+  const policies = overrides.policies ?? { gate: playbackGate.gate, resolveUrl: streamUrlResolver() };
   return {
     shared: overrides.shared ?? createSharedEngine(),
     tunedState,

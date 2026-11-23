@@ -87,7 +87,7 @@ export class VodPlaybackViewModel extends Observable {
   private play(fromMs: number): void {
     if (this.loaded === null || this.visit.kind !== 'Open') return;
     this.setStage(VOD_PLAYING);
-    this.engine.load(this.loaded.streamUrl, { live: false, startPositionMs: fromMs });
+    this.engine.load(this.deps.resolveUrl(this.loaded.streamUrl), { live: false, startPositionMs: fromMs });
     this.controls.reveal();
     if (this.visit.watch === null) this.visit = this.watch();
   }

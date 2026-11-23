@@ -18,6 +18,9 @@ describe('createVodDeps', () => {
     expect(deps.rememberPosition()).toBe(false);
     expect(deps.transportTimeoutMs()).toBe(8_000);
     expect(typeof deps.clock()).toBe('number');
+    expect(deps.resolveUrl('http://x/a.mp4')).toBe('http://x/a.mp4');
+    settings.set(TellySettings.CORS_PROXY, 'https://p/?url=');
+    expect(deps.resolveUrl('http://x/a.mp4')).toBe(`https://p/?url=${encodeURIComponent('http://x/a.mp4')}`);
   });
 
   it('createVodEngine hands out a fresh engine with its own attached video', () => {

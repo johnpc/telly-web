@@ -1,6 +1,7 @@
 import { channelRepository } from '@/core/db/channelRepository';
 import type { ChannelRow } from '@/core/db/types';
 import type { KeyValueStore } from '@/core/kv/keyValueStore';
+import { streamUrlResolver } from '@/core/net/streamUrl';
 import { createEngine, createVideoElement, type PlayerEngine } from '@/core/player';
 import type { BlockGate } from '@/features/playback/gate/blockGate';
 import { playbackGate } from '@/features/playback/gate/playbackGate';
@@ -21,7 +22,7 @@ export interface MultiviewDeps {
   gate: BlockGate;
   store: KeyValueStore;
   channels: () => Promise<ChannelRow[]>;
-  /** Stream-URL resolution applied at pane tunes (identity on the web; the CORS proxy is the engine's). */
+  /** Stream-URL resolution applied at pane tunes (the Stream & CORS proxy, read live per tune). */
   resolveUrl: (url: string) => string;
 }
 
@@ -37,7 +38,7 @@ export const multiviewDeps: MultiviewDeps = {
   gate: playbackGate.gate,
   store: playbackDeps.store,
   channels: () => channelRepository.visible(),
-  resolveUrl: (url) => url,
+  resolveUrl: streamUrlResolver(),
 };
 
 export function createMultiviewViewModel(deps: MultiviewDeps, onExit: () => void): MultiviewViewModel {

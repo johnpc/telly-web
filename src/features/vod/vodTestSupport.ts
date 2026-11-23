@@ -56,6 +56,7 @@ export function fakeVodDeps(items: VodItemRow[] = [vodItem('bunny')]): FakeVodDe
     rememberPosition: () => deps.remember,
     transportTimeoutMs: () => 5_000,
     clock: () => deps.now,
+    resolveUrl: (url) => url,
   };
   return deps;
 }

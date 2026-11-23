@@ -5,6 +5,7 @@ import { SettingsContext, defaultSettingsRepository } from '@/core/settings/sett
 import { AppDepsContext } from './appContext';
 import { RootScreen } from './RootScreen';
 import { StartRoute } from './startRoute';
+import { proxyDiscovery } from './proxyDiscovery';
 import { installTestHooks } from './testHooks';
 import { installGroupVisibility } from '@/features/playlist/groupVisibility';
 import { TellySettings } from '@/core/settings/tellySettings';
@@ -14,6 +15,8 @@ export function App(): JSX.Element {
   const [deps] = useState(() => {
     installTestHooks(defaultSettingsRepository);
     installGroupVisibility(defaultSettingsRepository);
+    // Fire-and-forget: a host that ships a stream proxy fills the setting in; the start route never waits.
+    void proxyDiscovery.run();
     return {
       startRoute: new StartRoute(() => defaultSettingsRepository.get(TellySettings.LAST_CHANNEL_ON_START)),
     };

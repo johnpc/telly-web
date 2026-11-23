@@ -6,12 +6,14 @@ import { action, notSet, type SettingsRow, toggle, value } from '../settingsRow'
 
 export const NOT_ON_WEB = '(not available on the web)';
 export const UA_WEB_NOTE = 'Kept for backups; browsers cannot send a custom User-Agent';
+export const PROXY_WEB_NOTE =
+  'Also routes every stream: an https page cannot play plain-http or CORS-less provider URLs directly';
 
 /**
  * General pane rows (catalogue 54–56; port of Android `SettingsRowsGeneral.kt`).
  * Web honesties: the two autostart rows have no browser meaning and render
  * locked with the Android copy; the User-Agent persists for backup parity
- * only; the CORS proxy is the one web-only row (CLAUDE.md decisions log).
+ * only; the Stream & CORS proxy is the one web-only row (CLAUDE.md decisions log).
  */
 export function generalRows(s: SettingsRepository, autoBackup: AutoBackupStatus): SettingsRow[] {
   return [
@@ -33,7 +35,7 @@ export function generalRows(s: SettingsRepository, autoBackup: AutoBackupStatus)
     toggle(RowIds.CONFIRM_EXIT, 'Confirm exit by second press Back', s.get(TellySettings.CONFIRM_EXIT)),
     value(RowIds.USER_AGENT, 'User-Agent', userAgentSummary(s.get(TellySettings.USER_AGENT))),
     value(RowIds.UDP_PROXY, 'UDP proxy (address:port)', notSet(s.get(TellySettings.UDP_PROXY))),
-    value(RowIds.CORS_PROXY, 'CORS proxy', notSet(s.get(TellySettings.CORS_PROXY))),
+    value(RowIds.CORS_PROXY, 'Stream & CORS proxy', proxySummary(s.get(TellySettings.CORS_PROXY))),
     toggle(
       RowIds.AUTO_BACKUP,
       'Automatic backup',
@@ -43,6 +45,11 @@ export function generalRows(s: SettingsRepository, autoBackup: AutoBackupStatus)
     action(RowIds.BACK_UP_DATA, 'Back up data'),
     action(RowIds.RESTORE_DATA, 'Restore data'),
   ];
+}
+
+/** The base (or "Not set") plus why the web routes streams through it too. */
+export function proxySummary(raw: string): string {
+  return `${notSet(raw)} — ${PROXY_WEB_NOTE}`;
 }
 
 /** "Not set" when blank; otherwise the value with the browser caveat. */

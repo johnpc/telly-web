@@ -91,7 +91,7 @@ export class TuneController {
 
   private playArchive(channel: ChannelRow, url: string): void {
     this.tuned.publish({ kind: 'Archive', channel, url });
-    this.deps.engine.load(url, { live: false });
+    this.deps.engine.load(this.policies.resolveUrl(url), { live: false });
   }
 
   private playLive(channel: ChannelRow, allowExternal: boolean): void {

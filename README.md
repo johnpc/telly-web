@@ -21,7 +21,10 @@ into a TV; on a phone a soft D-pad is offered. There is no backend and there are
   VOD titles, regenerated daily by the Android repo's demo-site workflow.
 
 Browsers only load what the origin allows (CORS). The demo site sets the right headers;
-if your provider does not, point **Settings → General → CORS proxy** at a proxy you run.
+if your provider does not, point **Settings → General → Stream & CORS proxy** at a proxy you
+run — on the web it routes the streams themselves too (an https page cannot play a provider's
+plain-http or CORS-less URL). The self-hosted image ships one at `/proxy/` and fills the setting
+in by itself on first start.
 
 ## Remote / keyboard map
 

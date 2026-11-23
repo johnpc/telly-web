@@ -14,7 +14,7 @@ export interface ExternalHandoff {
 export interface TunePolicies {
   gate: TuneGate;
   external: ExternalHandoff;
-  /** UDP proxy / CORS proxy rewriting of a live URL. */
+  /** Stream & CORS proxy rewriting of EVERY stream URL the tuner loads — live AND archive (unlike Android's UDP proxy). */
   resolveUrl: (url: string) => string;
 }
 
