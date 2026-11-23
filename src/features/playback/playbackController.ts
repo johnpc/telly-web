@@ -9,7 +9,6 @@ import type { PlaybackRecording } from '@/features/recording';
 import type { BlockGate } from './gate/blockGate';
 import { TuneBlockPrompt } from './gate/tuneBlockPrompt';
 import { PlaybackLifecycle } from './lifecycle/playbackLifecycle';
-import { channelActions } from './menu/channelActions';
 import type { PlaybackNavigation } from './menu/menuNavigation';
 import type { FlagActions, PlaybackMenuHandler } from './menu/playbackMenuHandler';
 import { OverlayState, type OverlayTimers } from './overlay/overlayState';
@@ -57,7 +56,7 @@ export interface PlaybackController {
   tuneFromPanel(channel: ChannelRow): void;
   /** The panel already tuned: show the zap overlay unless the gate is prompting. */
   onPanelTuned(): void;
-  openChannelMenu(channel: ChannelRow): void;
+  openChannelMenu(channel: ChannelRow, group: string): void;
 }
 
 export function createPlaybackController(deps: ControllerDeps): PlaybackController {
@@ -67,7 +66,7 @@ export function createPlaybackController(deps: ControllerDeps): PlaybackControll
   const commands = buildCommands(tuner, overlays, instant, nav, settings);
   const tuneFromPanel = panelTuner(tuner, gate, commands);
   const entry = buildNumberEntry(tuner, tuneFromPanel, deps.timers);
-  const { menu, record } = buildMenu(deps.actions ?? channelActions, deps.parental, commands, tuner, nav);
+  const { menu, record } = buildMenu(deps, commands, tuner);
   const catchup =
     deps.catchup ??
     createCatchupPlayback({
@@ -104,6 +103,6 @@ export function createPlaybackController(deps: ControllerDeps): PlaybackControll
     onKey: (key) => routeKey(keys, key),
     tuneFromPanel,
     onPanelTuned: afterTune(gate, commands),
-    openChannelMenu: (channel) => menu.openChannelMenu(channel.id),
+    openChannelMenu: (channel, group) => menu.openChannelMenu(channel.id, group),
   };
 }

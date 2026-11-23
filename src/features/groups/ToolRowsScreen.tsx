@@ -14,8 +14,7 @@ function Trailing({ row }: { row: ToolRow }): JSX.Element | null {
     return (
       <span
         className={`ml-auto h-[1em] w-[2em] shrink-0 rounded-full ${row.checked ? 'bg-telly-accent-blue' : 'bg-telly-text-disabled'}`}
-        role="switch"
-        aria-checked={row.checked}
+        aria-hidden
       />
     );
   }
@@ -49,6 +48,8 @@ export function ToolRowsScreen({ rows, focusPrefix, onActivate }: ToolRowsProps)
             focusedClassName="bg-telly-settings-focus-fill text-telly-focus-text"
             tabIndex={activatable(row) ? -1 : undefined}
             aria-disabled={!activatable(row)}
+            role={row.kind === 'toggle' ? 'switch' : undefined}
+            aria-checked={row.kind === 'toggle' ? row.checked : undefined}
             data-row-id={row.id}
             onClick={() => activatable(row) && onActivate(row.id)}
           >

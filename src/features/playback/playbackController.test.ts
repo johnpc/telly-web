@@ -27,9 +27,10 @@ async function make(pin: string | null = '2468') {
   const open = vi.fn();
   const pip = new PipState();
   const actions = {
-    toggleFavorite: vi.fn(async () => undefined),
-    hide: vi.fn(async () => undefined),
-    toggleBlocked: vi.fn(async () => undefined),
+    toggleFavorite: vi.fn(async () => 1),
+    hide: vi.fn(async () => 1),
+    blockMode: vi.fn(() => 'Enter PIN' as const),
+    submitBlockPin: vi.fn(async () => true),
   };
   const ctl = createPlaybackController({
     tuner,
@@ -98,7 +99,7 @@ describe('createPlaybackController', () => {
     ctl.commands.execute({ kind: 'Dismiss' });
     ctl.onPanelTuned();
     expect(ctl.overlays.value.kind).toBe('ZapInfo');
-    ctl.openChannelMenu(channel(3));
+    ctl.openChannelMenu(channel(3), 'All channels');
     expect(ctl.overlays.value).toEqual({ kind: 'ChannelMenu', channelId: 3 });
     expect(ctl.menu.menuChannel()?.id).toBe(3);
     ctl.lifecycle.onBackground();

@@ -1,21 +1,17 @@
 import type { JSX } from 'react';
-import { FocusScope } from '@/core/focus/FocusScope';
-import { programTitle } from '@/features/epg/nowNext';
+import { COMING_SOON, ChannelOptionsScreen, MessageScreen } from '@/features/channelmenu';
+import { GroupToolScreen } from '@/features/groups/GroupToolScreen';
 import { recordingLayer } from '@/features/recording';
-import { BLOCK_PIN_TITLES } from '../gate/channelBlocker';
 import { playbackGate } from '../gate/playbackGate';
 import { PinPrompt } from '../gate/PinPromptScreen';
-import { useChannelNow } from '../info/useChannelNow';
-import { ChannelMenu } from '../menu/ChannelMenuScreen';
 import { Description } from '../menu/DescriptionScreen';
-import { menuSections } from '../menu/playerMenu';
-import { BACK_TO_PANEL, popTo } from '../overlay/playbackCommands';
+import { popTo } from '../overlay/playbackCommands';
 import type { PushedOverlay } from '../overlay/playbackOverlay';
 import type { PlaybackController } from '../playbackController';
 import { TrackPicker } from '../tracks/TrackPickerScreen';
 import { applyPickerRow, pickerRows, type TrackSource } from '../tracks/trackPickerRows';
-import { Message } from '../ui/MessageScreen';
 import type { PlaybackSession } from '../tune/usePlaybackSession';
+import { SheetLayer } from './SheetLayerScreen';
 import type { PlaybackView } from './usePlaybackView';
 
 interface LayerProps {
@@ -24,22 +20,7 @@ interface LayerProps {
   instant: number;
 }
 
-function Sheet({ channelId, ctl, session, instant }: LayerProps & { channelId: number }): JSX.Element | null {
-  const channel = session.tuner.byId(channelId) ?? session.playing?.channel ?? null;
-  const now = useChannelNow(channel, instant);
-  if (channel === null) return null;
-  return (
-    <ChannelMenu
-      sections={menuSections(now === null ? null : programTitle(now), channel.name)}
-      state={{ favorite: channel.favorite, blocked: channel.blocked }}
-      restore={ctl.menu.sheetFocus.restore}
-      onItem={(item) => ctl.menu.onMenuItem(item)}
-      onBack={() => ctl.commands.execute(BACK_TO_PANEL)}
-    />
-  );
-}
-
-/** The screens a sheet row pushes; BACK pops to the overlay behind them. */
+/** The screens a sheet row pushes (shared with the guide); BACK pops to the overlay behind them. */
 function Pushed({
   overlay,
   ctl,
@@ -50,21 +31,24 @@ function Pushed({
   const back = (): void => ctl.commands.execute(popTo(overlay.back));
   switch (overlay.kind) {
     case 'Description':
-      return (
-        <FocusScope id="playback-description" trap onBack={back}>
-          <Description channel={overlay.channel} instant={instant} />
-        </FocusScope>
-      );
+      return <Description channel={overlay.channel} instant={instant} />;
     case 'ComingSoon':
+      return <MessageScreen headline={overlay.feature} subtitle={COMING_SOON} testId="coming-soon" />;
+    case 'ChannelOptions':
       return (
-        <FocusScope id="playback-coming-soon" trap onBack={back}>
-          <Message headline={overlay.feature} subtitle="Coming soon to telly" />
-        </FocusScope>
+        <ChannelOptionsScreen
+          channelId={overlay.channelId}
+          options={ctl.menu.options}
+          onRow={(channel, rowId) => ctl.menu.onChannelOption(channel, rowId)}
+          onBack={() => ctl.menu.closeChannelOptions()}
+        />
       );
+    case 'GroupTool':
+      return <GroupToolScreen session={overlay.session} />;
     case 'BlockPin':
       return (
         <PinPrompt
-          title={BLOCK_PIN_TITLES[overlay.mode]}
+          title={overlay.mode}
           keyboard={playbackGate.gate.keyboardPin}
           onSubmit={(pin) => void ctl.menu.submitBlockPin(pin)}
           onDismiss={back}
@@ -97,7 +81,7 @@ export function MenuLayers({
 }: Omit<LayerProps, 'instant'> & { view: PlaybackView }): JSX.Element | null {
   const { overlay, source, instant } = view;
   if (overlay.kind === 'ChannelMenu')
-    return <Sheet channelId={overlay.channelId} ctl={ctl} session={session} instant={instant} />;
+    return <SheetLayer channelId={overlay.channelId} ctl={ctl} session={session} instant={instant} />;
   if ('back' in overlay)
     return <Pushed overlay={overlay} source={source} ctl={ctl} session={session} instant={instant} />;
   return null;

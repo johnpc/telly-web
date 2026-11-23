@@ -39,18 +39,29 @@ Then('the channel row {string} is marked favorite', async ({ world }, name: stri
   await expect(row).toHaveAttribute('data-favorite', 'true');
 });
 
+// The move persists through the repository and the list re-renders off its live
+// query, so the order is polled until it holds (never asserted once off a stale DOM).
 Then('the channel row {string} is listed above {string}', async ({ world }, above: string, below: string) => {
   const rows = world.page.getByTestId('channel-edit-row');
   await expect(rows.filter({ hasText: above }).first()).toBeVisible();
-  const names = await rows.evaluateAll((els) => els.map((el) => el.getAttribute('data-channel-name') ?? ''));
-  const indexOf = (name: string): number => names.indexOf(name);
-  expect(indexOf(above)).toBeGreaterThanOrEqual(0);
-  expect(indexOf(above)).toBeLessThan(indexOf(below));
+  await expect
+    .poll(async () => {
+      const names = await rows.evaluateAll((els) =>
+        els.map((el) => el.getAttribute('data-channel-name') ?? ''),
+      );
+      return names.indexOf(above) >= 0 && names.indexOf(above) < names.indexOf(below);
+    })
+    .toBe(true);
 });
 
+// The guide's channel column renders the panel's row ids (`panel-row-<id>` + `row-name`).
 Then('the channel column lists {string} above {string}', async ({ world }, above: string, below: string) => {
-  const column = world.page.getByTestId('guide-channel-column');
-  await expect(column).toContainText(above);
-  const text = await column.innerText();
-  expect(text.indexOf(above)).toBeLessThan(text.indexOf(below));
+  const names = world.page.locator('[data-testid^="panel-row-"] [data-testid="row-name"]');
+  await expect(names.filter({ hasText: above }).first()).toBeVisible();
+  await expect
+    .poll(async () => {
+      const texts = await names.allInnerTexts();
+      return texts.indexOf(above) >= 0 && texts.indexOf(above) < texts.indexOf(below);
+    })
+    .toBe(true);
 });

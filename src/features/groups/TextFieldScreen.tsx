@@ -1,4 +1,4 @@
-import { useState, type JSX } from 'react';
+import { useEffect, useRef, useState, type JSX } from 'react';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { useFocusable } from '@/core/focus/useFocusable';
 import { useKeyHandler } from '@/core/input/useKeyHandler';
@@ -15,6 +15,9 @@ interface TextFieldProps {
 export function TextFieldScreen({ focusId, initial, onCommit }: TextFieldProps): JSX.Element {
   const [value, setValue] = useState(initial);
   const { ref, props } = useFocusable(focusId);
+  const field = useRef<HTMLInputElement | null>(null);
+  // Remote users replace rather than edit: typing goes over the selected initial text (Android IME replacement).
+  useEffect(() => field.current?.select(), []);
   useKeyHandler((key) => {
     if (key !== 'OK') return false;
     onCommit(value);
@@ -24,7 +27,10 @@ export function TextFieldScreen({ focusId, initial, onCommit }: TextFieldProps):
     <FocusScope id={`${focusId}-scope`} autoFocus="first">
       <input
         {...props}
-        ref={ref}
+        ref={(el) => {
+          field.current = el;
+          ref(el);
+        }}
         type="text"
         value={value}
         onChange={(e) => setValue(e.target.value)}

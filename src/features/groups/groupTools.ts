@@ -1,6 +1,6 @@
 import type { ChannelRow } from '@/core/db/types';
 import type { ParentalControls } from '@/core/settings/parentalControls';
-import type { SheetItem } from '@/features/guide/sheetMenu';
+import type { SheetItem } from '@/features/channelmenu/sheetMenu';
 import { CopyChannelsSession } from './copyChannelsSession';
 import type { CustomGroup } from './customGroups';
 import { AssignEpgSession, BulkFlagSession } from './flagSessions';

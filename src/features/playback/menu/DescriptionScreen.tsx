@@ -1,17 +1,17 @@
 import type { JSX } from 'react';
 import type { ChannelRow } from '@/core/db/types';
+import { MessageScreen, NO_INFORMATION } from '@/features/channelmenu';
 import { programTitle } from '@/features/epg/nowNext';
 import { useChannelNow } from '../info/useChannelNow';
-import { Message } from '../ui/MessageScreen';
-import { NO_INFORMATION } from './playerMenu';
 
-/** The sheet's "Program description": the channel's airing programme title + synopsis. */
+/** The sheet's "Program description": the channel's airing programme title + synopsis, on the shared description screen. */
 export function Description({ channel, instant }: { channel: ChannelRow; instant: number }): JSX.Element {
   const now = useChannelNow(channel, instant);
   return (
-    <Message
+    <MessageScreen
       headline={now === null ? NO_INFORMATION : programTitle(now)}
       subtitle={now?.description ?? NO_INFORMATION}
+      testId="guide-description"
     />
   );
 }

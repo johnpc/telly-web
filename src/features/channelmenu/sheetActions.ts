@@ -1,14 +1,20 @@
 import type { ChannelRepository } from '@/core/db/channelRepository';
 import type { ChannelRow } from '@/core/db/types';
 import type { ParentalControls } from '@/core/settings/parentalControls';
-import type { BlockPinMode } from './guideLayer';
+
+/** The subset of `SheetActions` the dispatcher needs (hosts' test seam). */
+export type SheetFlagActions = Pick<SheetActions, 'toggleFavorite' | 'hide' | 'blockMode' | 'submitBlockPin'>;
+
+/** PIN dialog flavours of the sheet's Block/Unblock row; the mode IS the dialog title (Android `BlockPinMode`). */
+export type BlockPinMode = 'Set a PIN' | 'Enter PIN';
 
 /**
- * The favorites/hide/block mutations the guide's sheet performs (Android
- * `GuideSheetChannelActions` + `ChannelBlocker`). Hiding the previewed
- * channel zaps away from it first; both block directions are PIN-gated.
+ * The channel-flag mutations a context sheet performs, bundled for BOTH
+ * hosts (Android `SheetActions` + `ChannelBlocker`): favorites and hiding
+ * persist straight through the repository; hiding the watched channel zaps
+ * away from it first; both block directions are PIN-gated.
  */
-export class GuideSheetActions {
+export class SheetActions {
   constructor(
     private readonly channels: ChannelRepository,
     private readonly parental: ParentalControls,
@@ -29,7 +35,10 @@ export class GuideSheetActions {
     return this.parental.hasPin ? 'Enter PIN' : 'Set a PIN';
   }
 
-  /** True when the PIN was accepted (or freshly set) and the flag flipped; false keeps the dialog up. */
+  /**
+   * True when the PIN was accepted (or freshly set) and the flag flipped off
+   * the FRESH row; false keeps the dialog up.
+   */
   async submitBlockPin(pin: string, mode: BlockPinMode, channelId: number): Promise<boolean> {
     if (mode === 'Set a PIN') {
       await this.parental.setPin(pin);

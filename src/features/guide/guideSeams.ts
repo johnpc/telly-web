@@ -1,13 +1,7 @@
-import { keyOf } from '@/core/db/channelIdentity';
 import { type MyListRepository, myListRepository } from '@/core/db/myListRepository';
 import { type ReminderRepository, reminderRepository } from '@/core/db/reminderRepository';
 import type { ChannelRow, ProgramRow } from '@/core/db/types';
-import { programTitle } from '@/features/epg/nowNext';
-
-/** Identity of a saved programme: stable channel key + airing start (Android `MyListKeys.of`). */
-export function myListKey(channelKey: string, startMs: number): string {
-  return `${channelKey}|${startMs}`;
-}
+import { programmeOf, toggleMyList } from '@/features/mylist/myListToggle';
 
 /** Identity of a reminder as the guide dropdown sees it (Android `ReminderKey`). */
 export function reminderKey(channelId: number, startMs: number, title: string): string {
@@ -32,18 +26,7 @@ export interface GuideSeamDeps {
 
 function myListToggle(myList: MyListRepository, now: () => number): GuideSeams['toggleMyList'] {
   return async (channel, program) => {
-    const channelKey = keyOf(channel);
-    const { startMs, endMs } = program;
-    if ((await myList.find(channelKey, startMs)) !== null) return myList.remove(channelKey, startMs);
-    const title = programTitle(program);
-    return myList.upsert({
-      channelKey,
-      startMs,
-      endMs,
-      title,
-      description: program.description,
-      addedAtMs: now(),
-    });
+    await toggleMyList(channel, programmeOf(program), myList, now());
   };
 }
 

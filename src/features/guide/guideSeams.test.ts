@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { MyListRepository } from '@/core/db/myListRepository';
 import { ReminderRepository } from '@/core/db/reminderRepository';
 import { freshDb } from '@/test/dbFixtures';
-import { createGuideSeams, myListKey, reminderKey } from './guideSeams';
+import { createGuideSeams, reminderKey } from './guideSeams';
 import { ORIGIN, channel, program } from './testFixtures';
 
 describe('guideSeams', () => {
@@ -26,7 +26,6 @@ describe('guideSeams', () => {
     expect(await reminders.upcoming()).toEqual([]);
     seams.openExternal(c);
     expect(openUrl).toHaveBeenCalledWith('http://x/1.ts');
-    expect(myListKey('k', 1)).toBe('k|1');
     expect(reminderKey(1, 2, 't')).toBe('1|2|t');
   });
   it('defaults to the app repositories and window.open', () => {

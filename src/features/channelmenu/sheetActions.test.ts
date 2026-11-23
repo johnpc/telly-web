@@ -4,7 +4,7 @@ import { MemoryKeyValueStore } from '@/core/kv/memoryKeyValueStore';
 import { ParentalControls } from '@/core/settings/parentalControls';
 import { SettingsRepository } from '@/core/settings/settingsRepository';
 import { channelImport, freshDb } from '@/test/dbFixtures';
-import { GuideSheetActions } from './guideSheetActions';
+import { SheetActions } from './sheetActions';
 
 async function make() {
   const repository = new ChannelRepository(freshDb());
@@ -17,12 +17,12 @@ async function make() {
     repository,
     first,
     parental,
-    actions: new GuideSheetActions(repository, parental, zapAway),
+    actions: new SheetActions(repository, parental, zapAway),
     zapAway,
   };
 }
 
-describe('GuideSheetActions', () => {
+describe('SheetActions', () => {
   it('toggles favorites and hides after zapping away', async () => {
     const { repository, first, actions, zapAway } = await make();
     await actions.toggleFavorite(first);

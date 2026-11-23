@@ -7,7 +7,8 @@ import { sp } from './guideCss';
 import { MENU_ROW_DP, MENU_WIDTH_DP, dropdownAnchor } from './guideDropdownAnchor';
 import { GRID_TOP_DP, dp } from './guideGeometry';
 import { GUIDE_CELL_ACTIONS, type GuideRow } from './guideModel';
-import { useMyListKeys, useReminderKeys } from './useSheetKeys';
+import { useMyListKeys } from '@/features/mylist/myListToggle';
+import { useReminderKeys } from './useSheetKeys';
 
 interface CellMenuProps {
   controller: GuideController;

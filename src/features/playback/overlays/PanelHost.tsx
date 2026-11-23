@@ -20,7 +20,7 @@ export function PanelHost({
           session={session}
           onClose={() => ctl.commands.execute(DISMISS)}
           onTuned={() => ctl.onPanelTuned()}
-          onContextMenu={(channel) => ctl.openChannelMenu(channel)}
+          onContextMenu={(channel, group) => ctl.openChannelMenu(channel, group)}
         />
       </div>
     </FocusScope>

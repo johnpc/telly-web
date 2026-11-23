@@ -1,12 +1,10 @@
 import type { JSX } from 'react';
+import { COMING_SOON, ChannelOptionsScreen, MessageScreen } from '@/features/channelmenu';
 import { GroupToolScreen } from '@/features/groups/GroupToolScreen';
 import { PinEntryScreen } from '@/features/groups/PinEntryScreen';
 import { ToolPaneScreen } from '@/features/groups/ToolPaneScreen';
 import { RecordingLayerScreen } from '@/features/recording';
-import { ChannelOptionsScreen } from './ChannelOptionsScreen';
-import { MessageScreen } from './MessageScreen';
 import type { GuideController } from './guideController';
-import { COMING_SOON } from './guideModel';
 
 /**
  * Screens the sheet routes to. Description and coming-soon are pushed (BACK
@@ -17,7 +15,15 @@ export function GuideLayersScreen({ controller }: { controller: GuideController 
   const layer = controller.layer;
   switch (layer.kind) {
     case 'ChannelOptions':
-      return <ChannelOptionsScreen controller={controller} channelId={layer.channelId} />;
+      return (
+        <ChannelOptionsScreen
+          channelId={layer.channelId}
+          options={controller.parts.options}
+          channels={controller.deps.channels}
+          onRow={controller.parts.onChannelOption}
+          onBack={() => controller.menu.close()}
+        />
+      );
     case 'GroupTool':
       return <GroupToolScreen session={layer.session} />;
     case 'Description':

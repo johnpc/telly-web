@@ -1,4 +1,4 @@
-import { useMemo, type JSX } from 'react';
+import { useCallback, useMemo, type JSX } from 'react';
 import type { ChannelRow } from '@/core/db/types';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { useFocusedId } from '@/core/focus/useFocusedId';
@@ -19,8 +19,8 @@ export interface ChannelPanelProps {
   onClose(): void;
   /** OK on a row, after `session.tuner.tune(channel)`: the host closes the panel and shows the zap overlay. */
   onTuned(channel: ChannelRow): void;
-  /** Long-OK on a row: the host opens the channel context menu. */
-  onContextMenu(channel: ChannelRow): void;
+  /** Long-OK on a row: the host opens the channel context menu in the selected group. */
+  onContextMenu(channel: ChannelRow, group: string): void;
   deps?: PanelDeps;
 }
 
@@ -40,7 +40,11 @@ export function ChannelPanel(props: ChannelPanelProps): JSX.Element {
   const { mode, command } = focus.state;
   const model = usePanelModel(session, mode.group, deps);
   useFocusCommand(command, model.rows);
-  usePanelKeys(model.rows, rowIndexOf(useFocusedId(), model.rows), mode.kind === 'Browsing', onContextMenu);
+  const openMenu = useCallback(
+    (channel: ChannelRow) => onContextMenu(channel, mode.group),
+    [onContextMenu, mode.group],
+  );
+  usePanelKeys(model.rows, rowIndexOf(useFocusedId(), model.rows), mode.kind === 'Browsing', openMenu);
   const tune = useTune(session, onTuned);
   const selectGroup = useSelectGroup(focus, model.lockedGroups);
   return (

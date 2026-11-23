@@ -1,9 +1,7 @@
+import type { BlockPinMode } from '@/features/channelmenu/sheetActions';
 import type { GroupToolSession } from '@/features/groups/groupToolSession';
 import type { GuideInfoData } from './guideInfoBuilder';
 import { type GuideCell, NO_INFORMATION } from './guideModel';
-
-/** PIN dialog flavours of the sheet's Block/Unblock row (Android `BlockPinMode`). */
-export type BlockPinMode = 'Set a PIN' | 'Enter PIN';
 
 /**
  * Which interaction layer owns the D-pad on the guide screen (Android

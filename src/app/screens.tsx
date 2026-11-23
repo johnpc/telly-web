@@ -3,7 +3,7 @@ import type { Route, RouteKind } from '@/core/navigation/routes';
 import { BootScreen } from './BootScreen';
 import { ComingSoonScreen } from './ComingSoonScreen';
 import { HistoryScreen } from '@/features/history/HistoryScreen';
-import { ChannelNamesEditorScreen } from '@/features/guide/ChannelNamesEditorScreen';
+import { ChannelNamesEditorScreen } from '@/features/channelmenu/ChannelNamesEditorScreen';
 import { GuideScreen } from '@/features/guide/GuideScreen';
 import { ManageFavoritesScreen, ReorderChannelsScreen } from '@/features/groups/ChannelEditHostScreen';
 import { PlaybackScreen } from '@/features/playback/PlaybackScreen';

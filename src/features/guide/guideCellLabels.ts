@@ -1,8 +1,8 @@
-import { keyOf } from '@/core/db/channelIdentity';
 import type { ChannelRow, ProgramRow } from '@/core/db/types';
+import { MY_LIST_REMOVE_LABEL, type SheetFlags } from '@/features/channelmenu/sheetMenu';
+import { isSavedInMyList } from '@/features/mylist/myListToggle';
 import type { GuideCell, GuideCellAction, GuideFocus, GuideRow } from './guideModel';
-import { myListKey, reminderKey } from './guideSeams';
-import { MY_LIST_REMOVE_LABEL, type SheetFlags } from './sheetMenu';
+import { reminderKey } from './guideSeams';
 
 export const REMIND_REMOVE_LABEL = 'Remove reminder';
 
@@ -21,7 +21,7 @@ export function cellActionLabel(action: GuideCellAction, state: CellLabelState):
   if (action === 'Remind' && state.reminders.has(reminderKey(channel.id, program.startMs, program.title))) {
     return REMIND_REMOVE_LABEL;
   }
-  if (action === 'Add to My list' && state.myList.has(myListKey(keyOf(channel), program.startMs))) {
+  if (action === 'Add to My list' && isSavedInMyList(state.myList, channel, program.startMs)) {
     return MY_LIST_REMOVE_LABEL;
   }
   return action;
@@ -35,7 +35,7 @@ export function sheetFlagsFor(
 ): SheetFlags {
   return {
     favorite: channel.favorite,
-    inMyList: program !== null && myList.has(myListKey(keyOf(channel), program.startMs)),
+    inMyList: isSavedInMyList(myList, channel, program?.startMs ?? null),
     blocked: channel.blocked,
   };
 }

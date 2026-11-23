@@ -1,6 +1,11 @@
+import type { ChannelRow } from '@/core/db/types';
+import {
+  ChannelOptionsController,
+  SheetActions,
+  type SheetItem,
+  externalDefaultOf,
+} from '@/features/channelmenu';
 import { type GuideRecording, createGuideRecording } from '@/features/recording';
-import { ChannelOptionsController } from './channelOptionsController';
-import { externalDefaultOf } from './channelOptionsValues';
 import { type CellActionDeps, onCellAction } from './guideCellMenuActions';
 import type { GuideCommandDeps } from './guideCommands';
 import type { GuideController, GuideControllerDeps } from './guideController';
@@ -8,20 +13,18 @@ import { clockStyleOf, commandDeps, playChannel, submitPin } from './guideContro
 import { type GuideInfoData, infoFor } from './guideInfoBuilder';
 import { type SheetActionDeps, onChannelOption, onSheetItem } from './guideMenuActions';
 import type { GuideCellAction } from './guideModel';
-import { GuideSheetActions } from './guideSheetActions';
 import type { ClockStyle } from './guideTimes';
-import type { SheetItem } from './sheetMenu';
 
 /** The controller's collaborators, built apart to keep `GuideController` small. */
 export interface GuideParts {
   options: ChannelOptionsController;
-  actions: GuideSheetActions;
+  actions: SheetActions;
   commands: GuideCommandDeps;
   clockStyle(): ClockStyle;
   info(): GuideInfoData | null;
   onCellAction(action: GuideCellAction): void;
   onSheetItem(item: SheetItem): void;
-  onChannelOption(rowId: string): void;
+  onChannelOption(channel: ChannelRow, rowId: string): void;
   /** The Block/Unblock or locked-group PIN dialog's submit; a wrong PIN keeps the dialog up. */
   submitPin(pin: string): Promise<void>;
   /** The DVR adapter the sheet / dropdown Record rows and the pushed DVR layers act through. */
@@ -64,7 +67,6 @@ function cellDeps(controller: GuideController, deps: GuideControllerDeps, core: 
 /** The sheet's and the Channel-options pane's row activations, resolved against the focused row / open pane. */
 function rowHandlers(
   controller: GuideController,
-  deps: GuideControllerDeps,
   sheet: SheetActionDeps,
 ): Pick<GuideParts, 'onSheetItem' | 'onChannelOption'> {
   return {
@@ -72,17 +74,13 @@ function rowHandlers(
       const row = controller.focusedRow();
       if (row !== undefined) onSheetItem(sheet, item, row.channel);
     },
-    onChannelOption: (rowId) => {
-      const layer = controller.layer;
-      const channel = layer.kind === 'ChannelOptions' ? deps.tuner.byId(layer.channelId) : null;
-      if (channel !== null) onChannelOption(sheet, channel, rowId);
-    },
+    onChannelOption: (channel, rowId) => onChannelOption(sheet, channel, rowId),
   };
 }
 
 export function buildParts(controller: GuideController, deps: GuideControllerDeps): GuideParts {
   const options = new ChannelOptionsController(deps.channels, () => externalDefaultOf(deps.settings));
-  const actions = new GuideSheetActions(deps.channels, deps.parental, (channel) =>
+  const actions = new SheetActions(deps.channels, deps.parental, (channel) =>
     deps.tuner.zapAwayFrom(channel),
   );
   const info = (): GuideInfoData | null =>
@@ -102,7 +100,7 @@ export function buildParts(controller: GuideController, deps: GuideControllerDep
     clockStyle: () => clockStyleOf(deps),
     commands: commandDeps(controller, deps),
     onCellAction: (action) => onCellAction(cellDeps(controller, deps, core), action),
-    ...rowHandlers(controller, deps, sheet),
+    ...rowHandlers(controller, sheet),
     submitPin: (pin) => submitPin(controller, deps, actions, pin),
   };
 }

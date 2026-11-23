@@ -218,7 +218,7 @@ describe('ChannelPanel', () => {
     expect(tune).toHaveBeenCalledWith(channels[1]);
     expect(onTuned).toHaveBeenCalledWith(channels[1]);
     await press('LONG_OK');
-    expect(onContextMenu).toHaveBeenCalledWith(channels[1]);
+    expect(onContextMenu).toHaveBeenCalledWith(channels[1], 'All channels');
     await act(async () => focusEngine.focus('panel-group-News'));
     await press('LONG_OK');
     expect(onContextMenu).toHaveBeenCalledTimes(1);

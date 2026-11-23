@@ -32,9 +32,14 @@ export const OFFSET_OPTIONS: readonly { label: string; raw: string }[] = Array.f
   },
 );
 
+/** The raw Playback → "Use external player" value as a boolean ("Off" is the only off). */
+export function externalOn(raw: string): boolean {
+  return raw !== 'Off';
+}
+
 /** The global Playback → "Use external player" setting as a boolean default. */
 export function externalDefaultOf(settings: SettingsRepository): boolean {
-  return settings.get(TellySettings.USE_EXTERNAL_PLAYER) !== 'Off';
+  return externalOn(settings.get(TellySettings.USE_EXTERNAL_PLAYER));
 }
 
 /** The toggle's checked state: per-channel override > global setting ("On"/"Off" raw). */

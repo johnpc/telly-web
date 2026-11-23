@@ -1,4 +1,5 @@
 import type { ChannelRow } from '@/core/db/types';
+import type { SheetActions } from '@/features/channelmenu';
 import { TellySettings } from '@/core/settings/tellySettings';
 import { GuideCatchup } from '@/features/catchup';
 import { LAST_CHANNEL_KEY } from '@/features/playback/tune';
@@ -8,7 +9,6 @@ import { cellOnRow } from './guideFocusJumps';
 import { rowIndexOf } from './guideFocusNav';
 import type { GuideRow } from './guideModel';
 import { rowWindow } from './guideScrollPlanner';
-import type { GuideSheetActions } from './guideSheetActions';
 import type { GuideCommandDeps } from './guideCommands';
 import { CLOCK_12H, CLOCK_24H, type ClockStyle, is24Raw } from './guideTimes';
 import type { GuideControllerDeps } from './guideWiring';
@@ -66,7 +66,7 @@ export function activateFocused(controller: GuideController, deps: GuideControll
 export async function submitPin(
   controller: GuideController,
   deps: GuideControllerDeps,
-  actions: GuideSheetActions,
+  actions: SheetActions,
   pin: string,
 ): Promise<void> {
   const layer = controller.layer;

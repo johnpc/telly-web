@@ -81,11 +81,24 @@ export const test = base.extend<{ world: TellyWorld }>({
       async focus(text, within) {
         const scope = within ? page.getByTestId(within) : page;
         // Visible text or, for icon-only controls (rail icons, trash cans), the aria-label.
-        // An exact `data-channel-name` wins over substring text ("News One" vs "News One HD").
-        const byName = scope.locator(`[data-focus-id][data-channel-name="${text}"]`);
-        const byText = scope.locator('[data-focus-id]').filter({ hasText: text });
-        const byLabel = scope.locator(`[data-focus-id][aria-label="${text}"]`);
-        const node = ((await byName.count()) > 0 ? byName : byText.or(byLabel)).first();
+        // Exact matches win (Android `hasText` is exact): `data-channel-name`, then whole-text,
+        // then aria-label for icon-only controls; substring text is the last resort ("1:00" vs "-11:00").
+        const focusables = scope.locator('[data-focus-id]');
+        const exact = new RegExp(`^\\s*${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`);
+        const fallback = focusables.filter({ hasText: text });
+        const preferred = [
+          scope.locator(`[data-focus-id][data-channel-name="${text}"]`),
+          focusables.filter({ hasText: exact }),
+          scope.locator(`[data-focus-id][aria-label="${text}"]`),
+        ];
+        let node = fallback;
+        for (const candidate of preferred) {
+          if ((await candidate.count()) > 0) {
+            node = candidate;
+            break;
+          }
+        }
+        node = node.first();
         await expect(node).toBeVisible();
         await node.evaluate((el) => (el as HTMLElement).focus());
         await expect(node).toBeFocused();
@@ -127,6 +140,7 @@ declare global {
     telly: {
       completeSetup(playlistUrl: string, epgUrl?: string): Promise<void>;
       setSetting(key: string, value: string): void;
+      setBlocked(name: string, blocked: boolean): Promise<void>;
       now(): number;
     };
   }

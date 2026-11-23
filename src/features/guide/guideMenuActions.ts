@@ -1,20 +1,26 @@
 import type { ChannelRow } from '@/core/db/types';
 import type { Route } from '@/core/navigation/routes';
+import {
+  type ChannelOptionsController,
+  type GroupToolHost,
+  type SheetActions,
+  type SheetHost,
+  type SheetItem,
+  openGroupTool,
+  runChannelOption,
+  runSheetItem,
+} from '@/features/channelmenu';
 import type { CustomGroup } from '@/features/groups/customGroups';
 import type { GroupTools } from '@/features/groups/groupTools';
 import type { GuideRecording } from '@/features/recording';
-import type { ChannelOptionsController } from './channelOptionsController';
-import { openGroupTool } from './guideGroupTools';
 import type { GuideInfoData } from './guideInfoBuilder';
-import { descriptionLayer } from './guideLayer';
+import { type GuideLayer, descriptionLayer } from './guideLayer';
 import type { GuideMenuController } from './guideMenuController';
-import type { GuideSheetActions } from './guideSheetActions';
-import { GROUP_TOOL_ITEMS, type SheetItem } from './sheetMenu';
 
 /** Everything the sheet rows reach outside the layer machine. */
 export interface SheetActionDeps {
   menu: GuideMenuController;
-  actions: GuideSheetActions;
+  actions: SheetActions;
   options: ChannelOptionsController;
   groupTools: GroupTools;
   info: () => GuideInfoData | null;
@@ -27,63 +33,52 @@ export interface SheetActionDeps {
   recording: Pick<GuideRecording, 'record' | 'customRecording'>;
 }
 
-/** Rows that act and land back on the grid (round3-ref 05). */
-function actThenReset(deps: SheetActionDeps, item: SheetItem, channel: ChannelRow): boolean {
-  const { menu, actions } = deps;
-  if (item === 'Add to Favorites') menu.actThenReset(() => void actions.toggleFavorite(channel));
-  else if (item === 'Hide channel') menu.actThenReset(() => void actions.hide(channel));
-  else if (item === 'Open in external player') menu.actThenReset(() => deps.openExternal(channel));
-  else if (item === 'Add to My list') menu.actThenReset(() => deps.toggleMyList(channel));
-  else return false;
-  return true;
-}
-
-/** Rows that push another screen (the sheet closes first, like Search). */
-function pushRoute(deps: SheetActionDeps, item: SheetItem): boolean {
-  const routes: Partial<Record<SheetItem, Route>> = {
-    Search: { kind: 'Search' },
-    Settings: { kind: 'Settings' },
-    'Manage Favorites': { kind: 'ManageFavorites' },
-    'Reorder channels': { kind: 'ReorderChannels', group: deps.selectedGroup() },
+/** The guide as a tool host: a tool is its own layer over the sheet; a finished one lands on the grid. */
+function toolHost(menu: GuideMenuController): GroupToolHost<GuideLayer> {
+  return {
+    current: () => menu.layer,
+    show: (layer) => menu.show(layer),
+    done: () => menu.reset(),
+    toolLayer: (session) => ({ kind: 'GroupTool', session }),
+    sessionOf: (layer) => (layer.kind === 'GroupTool' ? layer.session : null),
   };
-  const route = routes[item];
-  if (route === undefined) return false;
-  deps.menu.reset();
-  deps.open(route);
-  return true;
 }
 
 /**
- * The sheet's row dispatch (Android `GuideMenuController.onMenuItem`): every
- * row is live; Record / Custom recording act through the DVR adapter.
+ * The guide as a sheet host (Android `GuideMenuController.onMenuItem`): rows
+ * that act land back on the grid, pushed screens carry the sheet as their
+ * `back`, Channel options REPLACES the sheet (its BACK lands on the grid).
  */
-export function onSheetItem(deps: SheetActionDeps, item: SheetItem, channel: ChannelRow): void {
+export function guideSheetHost(deps: SheetActionDeps): SheetHost {
   const { menu } = deps;
-  if (actThenReset(deps, item, channel) || pushRoute(deps, item)) return;
-  if (item === 'Block channel')
-    menu.show({ kind: 'BlockPin', channelId: channel.id, mode: deps.actions.blockMode(), back: menu.layer });
-  else if (item === 'Program description') menu.show(descriptionLayer(deps.info()));
-  else if (item === 'Channel options') menu.show({ kind: 'ChannelOptions', channelId: channel.id });
-  else if (item === 'Record') deps.recording.record(channel);
-  else if (item === 'Custom recording') deps.recording.customRecording(channel);
-  else if (GROUP_TOOL_ITEMS.has(item)) {
-    openGroupTool(menu, deps.groupTools, item, channel, deps.selectedGroup(), deps.customGroups());
-  } else menu.comingSoon(item, menu.layer);
+  return {
+    actThenReset: (action) => menu.actThenReset(action),
+    open: (route) => {
+      menu.reset();
+      deps.open(route);
+    },
+    selectedGroup: deps.selectedGroup,
+    pushBlockPin: (channel, mode) =>
+      menu.show({ kind: 'BlockPin', channelId: channel.id, mode, back: menu.layer }),
+    pushDescription: () => menu.show(descriptionLayer(deps.info())),
+    showChannelOptions: (channel) => menu.show({ kind: 'ChannelOptions', channelId: channel.id }),
+    openGroupTool: (item, channel) => {
+      const input = { channel, group: deps.selectedGroup(), groups: deps.customGroups() };
+      openGroupTool(toolHost(menu), deps.groupTools, item, input);
+    },
+    record: (channel) => deps.recording.record(channel),
+    customRecording: (channel) => deps.recording.customRecording(channel),
+    toggleMyList: deps.toggleMyList,
+    openExternal: deps.openExternal,
+  };
 }
 
-/** A Channel-options pane row routed through the shared controller; effects reuse the sheet's flows. */
+/** The sheet's row dispatch through the ONE routing table. */
+export function onSheetItem(deps: SheetActionDeps, item: SheetItem, channel: ChannelRow): void {
+  runSheetItem(guideSheetHost(deps), deps.actions, item, channel);
+}
+
+/** A Channel-options pane row on the FRESH row the pane observes. */
 export function onChannelOption(deps: SheetActionDeps, channel: ChannelRow, rowId: string): void {
-  const effect = deps.options.onRow(channel, rowId);
-  if (effect === 'BLOCK') {
-    deps.menu.show({
-      kind: 'BlockPin',
-      channelId: channel.id,
-      mode: deps.actions.blockMode(),
-      back: deps.menu.layer,
-    });
-  } else if (effect === 'HIDE') deps.menu.actThenReset(() => void deps.actions.hide(channel));
-  else if (effect === 'NAMES_EDITOR') {
-    deps.menu.reset();
-    deps.open({ kind: 'ChannelNamesEditor' });
-  }
+  runChannelOption(guideSheetHost(deps), deps.actions, deps.options, channel, rowId);
 }

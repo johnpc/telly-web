@@ -47,6 +47,7 @@ export function ChannelEditListScreen({
       <ul
         className="absolute inset-x-0 flex flex-col overflow-y-auto"
         style={{ top: dp(80), bottom: dp(44), paddingLeft: dp(40), paddingRight: dp(40) }}
+        data-testid="channel-edit-list"
       >
         {rows.map((channel) => (
           <ChannelEditRow key={channel.id} channel={channel} showStars={showStars} onActivate={onActivate} />

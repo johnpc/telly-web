@@ -1,5 +1,6 @@
 import type { ChannelRow } from '@/core/db/types';
-import type { BlockPinMode } from '../gate/channelBlocker';
+import type { BlockPinMode } from '@/features/channelmenu/sheetActions';
+import type { GroupToolSession } from '@/features/groups/groupToolSession';
 import type { TrackPickerKind } from '../tracks/trackPickerKind';
 
 /**
@@ -29,6 +30,10 @@ export type PlaybackOverlay =
   | { kind: 'Description'; channel: ChannelRow; back: PlaybackOverlay }
   /** The sheet's Block/Unblock PIN dialog; BACK cancels back to the sheet. */
   | { kind: 'BlockPin'; channel: ChannelRow; mode: BlockPinMode; back: PlaybackOverlay }
+  /** The §41 "Channel options" pane: it REPLACES the sheet, so `back` is the panel, never the sheet. */
+  | { kind: 'ChannelOptions'; channelId: number; back: PlaybackOverlay }
+  /** A pushed group/bulk tool screen (Create group, Assign EPG, …); BACK pops to the sheet. */
+  | { kind: 'GroupTool'; session: GroupToolSession; back: PlaybackOverlay }
   /** Quick-bar track picker dialog (video / audio / audio-sync / CC). Sticky. */
   | { kind: 'TrackPicker'; picker: TrackPickerKind; back: PlaybackOverlay }
   /** DVR: "Stop recording?" behind a second Record on a channel already being captured. */
@@ -64,7 +69,8 @@ export function acceptsDigits(overlay: PlaybackOverlay): boolean {
   return overlay.kind === 'None' || overlay.kind === 'ZapInfo' || overlay.kind === 'Info';
 }
 
-/** Where a row that dismisses the sheet lands: the panel behind the channel menu, bare playback otherwise. */
+/** Where a row that dismisses the sheet lands: the panel beneath the sheet / its pushed screens, bare playback otherwise. */
 export function afterAction(current: PlaybackOverlay): PlaybackOverlay {
-  return current.kind === 'ChannelMenu' ? PANEL : NONE;
+  if (current.kind === 'ChannelMenu' || current.kind === 'Panel') return PANEL;
+  return isPushed(current) ? afterAction(current.back) : NONE;
 }

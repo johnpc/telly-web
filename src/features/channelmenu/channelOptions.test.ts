@@ -7,11 +7,15 @@ import {
   DECODER_OPTIONS,
   OFFSET_OPTIONS,
   decoderRawOf,
+  externalDefaultOf,
   externalEffective,
   offsetLabel,
   pickerRows,
 } from './channelOptionsValues';
-import { channel } from './testFixtures';
+import { MemoryKeyValueStore } from '@/core/kv/memoryKeyValueStore';
+import { SettingsRepository } from '@/core/settings/settingsRepository';
+import { TellySettings } from '@/core/settings/tellySettings';
+import { channel } from '@/features/guide/testFixtures';
 
 async function seeded() {
   const db = freshDb();
@@ -106,5 +110,11 @@ describe('ChannelOptionsController', () => {
     options.onRow(first, OPTION.NAME);
     expect(options.closeDialog()).toBe(true);
     options.submitRename('');
+  });
+  it('reads the global external-player default off the settings', () => {
+    const settings = new SettingsRepository(new MemoryKeyValueStore());
+    expect(externalDefaultOf(settings)).toBe(false);
+    settings.set(TellySettings.USE_EXTERNAL_PLAYER, 'On');
+    expect(externalDefaultOf(settings)).toBe(true);
   });
 });

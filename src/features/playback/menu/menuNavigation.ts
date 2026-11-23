@@ -25,10 +25,8 @@ export function playbackNavigationOf(
     openHistory: () => navigator.push({ kind: 'History' }),
     openMultiview: () => navigator.push({ kind: 'Multiview' }),
     openRecordings: () => navigator.push({ kind: 'Recordings' }),
+    open: (route) => navigator.push(route),
     openSearch: () => navigator.push({ kind: 'Search' }),
-    openSettings: () => navigator.push({ kind: 'Settings' }),
-    openManageFavorites: () => navigator.push({ kind: 'ManageFavorites' }),
-    openReorderChannels: (group) => navigator.push({ kind: 'ReorderChannels', group }),
     openExternal: open,
   };
 }

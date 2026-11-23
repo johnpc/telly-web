@@ -19,48 +19,13 @@ async function storePin(page: Page, pin: string): Promise<void> {
 
 Given('the parental PIN is {string}', async ({ world }, pin: string) => storePin(world.page, pin));
 
-// Arranged in the app's own database (the `channels.blocked` flag), then a
-// relaunch so every live query starts from the blocked state — the Android
-// step writes the Room row the same way before the scenario proceeds.
+// Arranged through the app's own data layer (the `channels.blocked` flag); the running
+// app's live queries pick it up, exactly as the Android step's Room write does — no relaunch.
 Given(
   'the channel {string} is blocked behind the PIN {string}',
   async ({ world }, name: string, pin: string) => {
-    const { page } = world;
-    await storePin(page, pin);
-    await page.evaluate(
-      (channelName) =>
-        new Promise<void>((resolve, reject) => {
-          const open = indexedDB.open('telly');
-          open.onerror = () => reject(open.error);
-          open.onsuccess = () => {
-            const db = open.result;
-            const tx = db.transaction('channels', 'readwrite');
-            const store = tx.objectStore('channels');
-            const all = store.getAll();
-            all.onsuccess = () => {
-              const rows = all.result as { name: string; blocked: boolean }[];
-              const row = rows.find((r) => r.name === channelName);
-              if (row === undefined) return reject(new Error(`no channel named ${channelName}`));
-              store.put({ ...row, blocked: true });
-            };
-            tx.oncomplete = () => {
-              db.close();
-              resolve();
-            };
-            tx.onerror = () => reject(tx.error);
-          };
-        }),
-      name,
-    );
-    await world.relaunch();
-    // Playback is up when a channel is tuned OR, when the blocked channel was the last-watched
-    // one, when its PIN prompt gates the restore tune (Android's gate fires first, too).
-    await expect(
-      page
-        .getByTestId('playback-screen')
-        .and(page.locator('[data-channel-number]'))
-        .or(page.getByTestId('pin-prompt')),
-    ).toBeVisible();
+    await storePin(world.page, pin);
+    await world.page.evaluate((channelName) => window.telly.setBlocked(channelName, true), name);
   },
 );
 

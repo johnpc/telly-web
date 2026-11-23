@@ -1,12 +1,17 @@
+import { channelRepository } from '@/core/db/channelRepository';
 import type { ChannelRow } from '@/core/db/types';
-import type { ParentalControls } from '@/core/settings/parentalControls';
+import { ParentalControls } from '@/core/settings/parentalControls';
 import type { SettingsRepository } from '@/core/settings/settingsRepository';
 import { TellySettings } from '@/core/settings/tellySettings';
+import { ChannelOptionsController, SheetActions, externalDefaultOf } from '@/features/channelmenu';
+import { createGroupToolStore } from '@/features/groups/groupToolStore';
+import { GroupTools } from '@/features/groups/groupTools';
 import { type PlaybackRecording, createPlaybackRecording } from '@/features/recording';
 import type { BlockGate } from './gate/blockGate';
-import { ChannelBlocker } from './gate/channelBlocker';
 import type { PlaybackNavigation } from './menu/menuNavigation';
-import { type FlagActions, PlaybackMenuHandler } from './menu/playbackMenuHandler';
+import { togglePanelMyList } from './menu/panelMyList';
+import { PlaybackMenuHandler } from './menu/playbackMenuHandler';
+import type { ControllerDeps } from './playbackController';
 import type { OverlayState, OverlayTimers } from './overlay/overlayState';
 import { panelTimeoutsForSeconds } from './overlay/panelTimeouts';
 import { PlaybackCommands } from './overlay/playbackCommands';
@@ -66,20 +71,23 @@ export function buildNumberEntry(
   );
 }
 
+/** The sheet handler over the shared channel-menu slice: flags, the Channel-options pane and the group tools. */
 export function buildMenu(
-  actions: FlagActions,
-  parental: ParentalControls | null,
+  deps: Pick<ControllerDeps, 'actions' | 'parental' | 'settings' | 'nav'>,
   commands: PlaybackCommands,
   tuner: TuneController,
-  nav: PlaybackNavigation,
 ): { menu: PlaybackMenuHandler; record: PlaybackRecording } {
   const record = buildRecording(commands, tuner);
+  const parental = deps.parental ?? new ParentalControls(deps.settings);
   const menu = new PlaybackMenuHandler({
-    actions,
-    blocker: new ChannelBlocker(actions, parental),
+    actions:
+      deps.actions ?? new SheetActions(channelRepository, parental, (channel) => tuner.zapAwayFrom(channel)),
+    options: new ChannelOptionsController(channelRepository, () => externalDefaultOf(deps.settings)),
+    groupTools: new GroupTools(createGroupToolStore(), parental),
     commands,
     tuner,
-    nav,
+    nav: deps.nav,
+    toggleMyList: (channel) => void togglePanelMyList(channel),
     record,
   });
   return { menu, record };

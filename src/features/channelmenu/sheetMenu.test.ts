@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GROUP_TOOL_ITEMS, SHEET_ITEMS, sheetLabel, sheetSections } from './sheetMenu';
+import { SHEET_ITEMS, sheetLabel, sheetRowId, sheetSections } from './sheetMenu';
 
 describe('sheetMenu', () => {
   it('lists the four captured sections verbatim', () => {
@@ -7,7 +7,7 @@ describe('sheetMenu', () => {
     expect(sections.map((s) => s.header)).toEqual([null, 'Show: Ep', 'News One', 'All channels']);
     expect(sections.flatMap((s) => [...s.items])).toEqual([...SHEET_ITEMS]);
     expect(sheetSections(null, 'X')[1]?.header).toBe('No information');
-    expect(GROUP_TOOL_ITEMS.size).toBe(6);
+    expect(sheetRowId('guide-sheet-', 'Add to My list')).toBe('guide-sheet-Add-to-My-list');
   });
   it('flips the state-dependent labels', () => {
     const off = { favorite: false, inMyList: false, blocked: false };

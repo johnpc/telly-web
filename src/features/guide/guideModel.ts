@@ -29,8 +29,7 @@ export interface GuideFocus {
   anchorMs: number;
 }
 
-/** TiviMate's placeholder for EPG-less cells and channels. */
-export const NO_INFORMATION = 'No information';
+export { COMING_SOON, NO_INFORMATION } from '@/features/channelmenu/sheetMenu';
 
 /** The rows of the long-OK cell dropdown, in capture order ("Play channel" leads). */
 export const GUIDE_CELL_ACTIONS = [
@@ -43,6 +42,3 @@ export const GUIDE_CELL_ACTIONS = [
 ] as const;
 
 export type GuideCellAction = (typeof GUIDE_CELL_ACTIONS)[number];
-
-/** Copy of the branded placeholder's subtitle (Android `playback_coming_soon`). */
-export const COMING_SOON = 'Coming soon to telly';

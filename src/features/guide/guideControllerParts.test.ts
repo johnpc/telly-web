@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { TellySettings } from '@/core/settings/tellySettings';
-import { OPTION } from './channelOptionsRows';
+import { OPTION } from '@/features/channelmenu/channelOptionsRows';
 import { GRID, ROW_MENU } from './guideLayer';
 import type { GuideRow } from './guideModel';
 import { CLOCK_24H } from './guideTimes';
@@ -73,24 +73,42 @@ describe('guideControllerParts: sheet rows', () => {
   });
 });
 
+describe('guideControllerParts: group tools', () => {
+  it('a finished tool lands on the grid only while it is still the layer', async () => {
+    const h = await withSheet();
+    h.controller.parts.onSheetItem('Create group');
+    const first = h.controller.layer;
+    if (first.kind !== 'GroupTool') throw new Error('expected a tool layer');
+    first.session.submitText('Picks');
+    await vi.waitFor(() => expect(h.controller.layer).toEqual(GRID));
+    h.controller.onKey('MENU');
+    h.controller.parts.onSheetItem('Create group');
+    const second = h.controller.layer;
+    if (second.kind !== 'GroupTool') throw new Error('expected a tool layer');
+    h.controller.menu.show(ROW_MENU);
+    second.session.submitText('Late');
+    await new Promise((r) => setTimeout(r, 20));
+    expect(h.controller.layer).toEqual(ROW_MENU);
+  });
+});
+
 describe('guideControllerParts: channel options, cell menu, PIN', () => {
   it('routes pane rows through the shared controller and the host effects', async () => {
     const h = await withSheet();
     const { parts } = h.controller;
+    const [first, second] = h.rows.map((r) => r.channel);
+    if (first === undefined || second === undefined) throw new Error('seed');
     parts.onSheetItem('Channel options');
-    parts.onChannelOption(OPTION.BLOCK);
+    parts.onChannelOption(first, OPTION.BLOCK);
     expect(h.controller.layer).toMatchObject({ kind: 'BlockPin', back: { kind: 'ChannelOptions' } });
-    h.controller.menu.show({ kind: 'ChannelOptions', channelId: h.rows[1]?.channel.id ?? 0 });
-    parts.onChannelOption(OPTION.NAMES_EDITOR);
+    h.controller.menu.show({ kind: 'ChannelOptions', channelId: second.id });
+    parts.onChannelOption(second, OPTION.NAMES_EDITOR);
     expect(h.controller.layer).toEqual(GRID);
     expect(h.opened).toEqual([{ kind: 'ChannelNamesEditor' }]);
-    h.controller.menu.show({ kind: 'ChannelOptions', channelId: h.rows[1]?.channel.id ?? 0 });
-    parts.onChannelOption(OPTION.HIDE);
+    h.controller.menu.show({ kind: 'ChannelOptions', channelId: second.id });
+    parts.onChannelOption(second, OPTION.HIDE);
     expect(h.controller.layer).toEqual(GRID);
-    h.controller.menu.show({ kind: 'ChannelOptions', channelId: 999 });
-    parts.onChannelOption(OPTION.HIDE);
-    h.controller.menu.show(GRID);
-    parts.onChannelOption(OPTION.HIDE);
+    expect((await h.channels.byId(second.id))?.hidden).toBe(true);
   });
   it('submits the block and group PINs and reads the clock style', async () => {
     const h = await withSheet();

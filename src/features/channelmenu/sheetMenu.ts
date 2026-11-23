@@ -1,6 +1,9 @@
-import { NO_INFORMATION } from './guideModel';
-
-/** Verbatim TiviMate context-menu rows (Android `PlayerMenuItem`). */
+/**
+ * Verbatim TiviMate 5.2.0 context-menu rows (captures 38-40 + round3-ref 05):
+ * long-OK on a panel row or MENU on a guide row, the host still visible
+ * behind. ONE definition for both hosts (Android `PlayerMenuItem` +
+ * `PlayerMenu`); where each row leads is derived once in `menuRouting.ts`.
+ */
 export const SHEET_ITEMS = [
   'Search',
   'Settings',
@@ -31,6 +34,12 @@ export interface SheetSection {
   items: readonly SheetItem[];
 }
 
+/** TiviMate's placeholder for EPG-less cells, channels and the description screen. */
+export const NO_INFORMATION = 'No information';
+
+/** Copy of the branded placeholder's subtitle (Android `playback_coming_soon`). */
+export const COMING_SOON = 'Coming soon to telly';
+
 const TOP: readonly SheetItem[] = ['Search', 'Settings'];
 const PROGRAMME: readonly SheetItem[] = [
   'Open in external player',
@@ -56,7 +65,7 @@ const ALL_CHANNELS_ITEMS: readonly SheetItem[] = [
   'Group options',
 ];
 
-/** The full long-OK sheet on a guide row (round3-ref 05). */
+/** The full sheet on a panel/guide row (round3-ref 05). */
 export function sheetSections(programTitle: string | null, channelName: string): SheetSection[] {
   return [
     { header: null, items: TOP },
@@ -66,6 +75,7 @@ export function sheetSections(programTitle: string | null, channelName: string):
   ];
 }
 
+/** The live state the sheet's flipping rows read. */
 export interface SheetFlags {
   favorite: boolean;
   inMyList: boolean;
@@ -74,20 +84,15 @@ export interface SheetFlags {
 
 export const MY_LIST_REMOVE_LABEL = 'Remove from My list';
 
-/** Rows whose label flips with the channel/programme state. */
+/** A sheet row's focus id: the host's prefix + the item with dashes (hosts key focus policies off the prefix). */
+export function sheetRowId(focusPrefix: string, item: SheetItem): string {
+  return `${focusPrefix}${item.replaceAll(' ', '-')}`;
+}
+
+/** Rows whose label flips with the channel/programme state (Android `PlayerMenuItem.labelFor`). */
 export function sheetLabel(item: SheetItem, flags: SheetFlags): string {
   if (item === 'Add to Favorites' && flags.favorite) return 'Remove from Favorites';
   if (item === 'Add to My list' && flags.inMyList) return MY_LIST_REMOVE_LABEL;
   if (item === 'Block channel' && flags.blocked) return 'Unblock channel';
   return item;
 }
-
-/** The six rows served by the group/bulk tool sessions. */
-export const GROUP_TOOL_ITEMS: ReadonlySet<SheetItem> = new Set<SheetItem>([
-  'Create group',
-  'Group options',
-  'Copy channels',
-  'Assign EPG',
-  'Manage blocking',
-  'Manage visibility',
-]);

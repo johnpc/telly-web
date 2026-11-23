@@ -80,7 +80,7 @@ describe('Chrome', () => {
       }),
     );
     expect(screen.getByText('Coming soon to telly')).toBeInTheDocument();
-    act(() => ctl.openChannelMenu(channel(1)));
+    act(() => ctl.openChannelMenu(channel(1), 'All channels'));
     expect(screen.getByTestId('channel-menu')).toBeInTheDocument();
     expect(screen.getByTestId('channel-panel')).toBeInTheDocument();
     act(() =>
@@ -93,7 +93,7 @@ describe('Chrome', () => {
     act(() =>
       ctl.commands.execute({
         kind: 'Show',
-        overlay: { kind: 'BlockPin', channel: channel(1), mode: 'Setup', back: { kind: 'None' } },
+        overlay: { kind: 'BlockPin', channel: channel(1), mode: 'Set a PIN', back: { kind: 'None' } },
       }),
     );
     expect(screen.getByText('Set a PIN')).toBeInTheDocument();

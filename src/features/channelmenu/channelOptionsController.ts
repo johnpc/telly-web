@@ -2,7 +2,7 @@ import type { ChannelRepository } from '@/core/db/channelRepository';
 import { type ChannelOverrides, type ChannelRow, displayName } from '@/core/db/types';
 import { OPTION } from './channelOptionsRows';
 import { type ChannelOptionsPicker, decoderRawOf, externalEffective } from './channelOptionsValues';
-import { Observable } from './observable';
+import { Observable } from '@/features/guide/observable';
 
 /** The pane's in-pane dialogs: the rename editor and the value pickers. */
 export type ChannelOptionsDialog =

@@ -33,6 +33,8 @@ export interface OnboardingTestHooks {
   programs(tvgId: string, fromMs: number, toMs: number): Promise<StoredProgram[]>;
   programCount(): Promise<number>;
   setFavorite(name: string, favorite: boolean): Promise<void>;
+  /** Writes `channels.blocked` through Dexie so every live query reacts (Android writes the Room row). */
+  setBlocked(name: string, blocked: boolean): Promise<void>;
   /** "Update playlist" without the settings sheet: the same refresh path it drives. */
   refreshPlaylist(url: string): Promise<void>;
 }
@@ -57,6 +59,10 @@ export function createOnboardingTestHooks(settings: SettingsRepository): Onboard
     async setFavorite(name, favorite) {
       const row = (await channelRepository.visible()).find((channel) => channel.name === name);
       if (row !== undefined) await channelRepository.updateFlags(row.id, { favorite });
+    },
+    async setBlocked(name, blocked) {
+      const row = (await channelRepository.all()).find((channel) => channel.name === name);
+      if (row !== undefined) await channelRepository.updateFlags(row.id, { blocked });
     },
     async refreshPlaylist(url) {
       await updatePlaylist(url, defaultRefreshDeps(settings.get(TellySettings.CORS_PROXY)));

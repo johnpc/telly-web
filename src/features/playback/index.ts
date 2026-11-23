@@ -4,17 +4,6 @@ export { PinPrompt } from './gate/PinPromptScreen';
 export { BlockGate, type BlockGateState } from './gate/blockGate';
 export { BlockSession, type BlockSessionState } from './gate/blockSession';
 export { playbackGate, createPlaybackGate, type PlaybackGate } from './gate/playbackGate';
-export { ChannelBlocker, BLOCK_PIN_TITLES, type BlockPinMode } from './gate/channelBlocker';
-export { ChannelActions, channelActions } from './menu/channelActions';
-export {
-  menuSections,
-  menuLabel,
-  PLAYER_MENU_ITEMS,
-  type PlayerMenuItem,
-  type PlayerMenuSection,
-} from './menu/playerMenu';
-export { routeOf, PlayerMenuFocus, type PlayerMenuRoute } from './menu/playerMenuRouting';
-export { ChannelMenu } from './menu/ChannelMenuScreen';
 export { ProgramTimes } from './info/programTimes';
 export { type ClockStyle, clockStyleOf, is24Raw } from './info/clockStyle';
 export { useClockStyle, usePanelStyle, type PanelStyle } from './info/usePlayerSettings';

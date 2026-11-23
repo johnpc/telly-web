@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useSettingsRepository } from '@/core/settings/settingsContext';
 import { TellySettings } from '@/core/settings/tellySettings';
 import { useEpgRefresh } from '@/features/epg/useEpgRefresh';
@@ -19,10 +19,9 @@ export function useBackgroundRefresh(): void {
   const settings = useSettingsRepository();
   const epg = useEpgRefresh();
   const mutateEpg = epg.mutate;
-  const started = useRef(false);
+  // No "started" latch: the effect owns the interval it creates and the cleanup clears it, so a
+  // re-run (StrictMode, a dependency change) always leaves exactly one live ticker.
   useEffect(() => {
-    if (started.current) return;
-    started.current = true;
     const deps = defaultRefreshDeps(settings.get(TellySettings.CORS_PROXY));
     const policy = (onStart: boolean): DuePolicy => ({
       onStart,

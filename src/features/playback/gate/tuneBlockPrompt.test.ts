@@ -4,7 +4,6 @@ import { ParentalControls } from '@/core/settings/parentalControls';
 import { SettingsRepository } from '@/core/settings/settingsRepository';
 import { channel, fakeEngine, tunerOver } from '../fixtures.test';
 import { BlockGate } from './blockGate';
-import { BLOCK_PIN_TITLES, ChannelBlocker } from './channelBlocker';
 import { TuneBlockPrompt } from './tuneBlockPrompt';
 
 const blocked = channel(2, { blocked: true });
@@ -41,23 +40,5 @@ describe('TuneBlockPrompt', () => {
     const silent = new TuneBlockPrompt(gate, () => undefined);
     silent.dismiss();
     expect(await silent.submit('2468')).toBe(false);
-  });
-});
-
-describe('ChannelBlocker', () => {
-  it('sets a PIN first when none exists, then confirms it, flipping the flag on success', async () => {
-    const parental = await parentalWithPin(null);
-    const toggleBlocked = vi.fn(async () => undefined);
-    const blocker = new ChannelBlocker({ toggleBlocked }, parental);
-    expect(blocker.mode()).toBe('Setup');
-    expect(BLOCK_PIN_TITLES[blocker.mode()]).toBe('Set a PIN');
-    expect(await blocker.submit('2468', 'Setup', blocked)).toBe(true);
-    expect(toggleBlocked).toHaveBeenCalledWith(blocked);
-    expect(blocker.mode()).toBe('Confirm');
-    expect(BLOCK_PIN_TITLES.Confirm).toBe('Enter PIN');
-    expect(await blocker.submit('1111', 'Confirm', blocked)).toBe(false);
-    expect(await blocker.submit('2468', 'Confirm', blocked)).toBe(true);
-    expect(toggleBlocked).toHaveBeenCalledTimes(2);
-    expect(await new ChannelBlocker({ toggleBlocked }).submit('2468', 'Setup', blocked)).toBe(false);
   });
 });
