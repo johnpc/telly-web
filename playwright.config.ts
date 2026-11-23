@@ -13,6 +13,10 @@ const testDir = defineBddConfig({
 });
 
 const TAG = process.env.E2E_TAG ? `@${process.env.E2E_TAG}` : undefined;
+// E2E_PORT isolates a run (e.g. side-by-side recordings on a production build) from the
+// default dev server; E2E_PREVIEW=1 (and CI) serve `dist` instead of live sources.
+const PORT = Number(process.env.E2E_PORT ?? 4173);
+const PREVIEW = Boolean(process.env.CI) || process.env.E2E_PREVIEW === '1';
 
 export default defineConfig({
   testDir,
@@ -26,7 +30,7 @@ export default defineConfig({
   outputDir: 'test-results',
   ...(TAG ? { grep: new RegExp(TAG) } : {}),
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: `http://127.0.0.1:${PORT}`,
     viewport: { width: 1920, height: 1080 },
     hasTouch: false,
     video: process.env.E2E_VIDEO ? 'on' : 'retain-on-failure',
@@ -45,8 +49,10 @@ export default defineConfig({
     },
     {
       // CI serves the production build; locally the dev server reflects live edits and is shared by parallel runs.
-      command: process.env.CI ? 'npx vite preview' : 'npx vite --port 4173 --strictPort',
-      port: 4173,
+      command: PREVIEW
+        ? `npx vite preview --port ${PORT} --strictPort`
+        : `npx vite --port ${PORT} --strictPort`,
+      port: PORT,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },

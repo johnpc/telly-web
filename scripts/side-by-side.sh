@@ -21,11 +21,12 @@ rm -rf "$OUT" && mkdir -p "$OUT/web" "$OUT/android"
 
 step() { printf '\n=== %s ===\n' "$1"; }
 
-step "web: record @$AREA with Playwright"
-rm -rf test-results
+step "web: record @$AREA with Playwright (production build on its own port)"
+export E2E_PORT="${E2E_PORT:-4174}" E2E_PREVIEW=1
+[ -d dist ] || npx vite build >/dev/null
 E2E_TAG="$AREA" E2E_VIDEO=1 npx bddgen >/dev/null
-E2E_TAG="$AREA" E2E_VIDEO=1 npx playwright test ${GREP:+-g "$GREP"} || echo "(web scenarios failed — recording kept)"
-find test-results -name '*.webm' -exec cp {} "$OUT/web/" \;
+E2E_TAG="$AREA" E2E_VIDEO=1 npx playwright test --output "$OUT/web-results" ${GREP:+-g "$GREP"} || echo "(web scenarios failed — recording kept)"
+find "$OUT/web-results" -name '*.webm' -exec cp {} "$OUT/web/" \;
 
 step "android: sync tree + run @$AREA on the mini with screenrecord"
 rsync -az --delete --exclude build --exclude .gradle --exclude '*/build' --exclude .git \
