@@ -2,7 +2,6 @@ import type { JSX } from 'react';
 import { Focusable } from '@/core/focus/Focusable';
 import { type ChannelRow, displayName } from '@/core/db/types';
 import { LogoTileScreen } from '@/features/guide/LogoTileScreen';
-import { GUIDE_ROOT_STYLE } from '@/features/guide/guideCss';
 import { channelEditFocusId } from './channelEdit';
 import { dp, sp } from './toolCss';
 
@@ -29,7 +28,6 @@ export function ChannelEditListScreen({
   return (
     <div
       className="relative h-full w-full overflow-hidden bg-telly-onboarding-bg text-telly-text"
-      style={GUIDE_ROOT_STYLE}
       data-testid="channel-edit-screen"
     >
       <h1
@@ -71,7 +69,7 @@ function ChannelEditRow({ channel, showStars, onActivate }: ChannelEditRowProps)
       focusId={channelEditFocusId(channel.id)}
       className="flex shrink-0 items-center rounded-[4px]"
       style={{ height: dp(39), paddingLeft: dp(8), paddingRight: dp(8), fontSize: sp(15) }}
-      focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
       data-testid="channel-edit-row"
       data-channel-id={channel.id}
       data-channel-name={name}

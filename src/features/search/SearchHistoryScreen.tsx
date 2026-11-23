@@ -48,7 +48,7 @@ export function SearchHistoryScreen({ entries, onEntry, onClear }: SearchHistory
               focusId={historyRowId(index)}
               onClick={() => onEntry(entry)}
               className="flex h-[5rem] w-full items-center rounded-[0.5rem] px-[1.5rem] text-[2rem] md:w-[75rem]"
-              focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+              focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
             >
               {entry}
             </Focusable>

@@ -4,6 +4,8 @@ import { createBdd, test as base } from 'playwright-bdd';
 import { expect, type Page } from '@playwright/test';
 
 export const FIXTURE_HOST = 'http://127.0.0.1:8090';
+/** A focusable the remote can reach: not inside an `inert` underlay (the screen a sheet keeps mounted beneath it). */
+const REACHABLE = '[data-focus-id]:not([inert] *)';
 
 export interface TellyWorld {
   page: Page;
@@ -80,16 +82,17 @@ export const test = base.extend<{ world: TellyWorld }>({
       },
       async focus(text, within) {
         const scope = within ? page.getByTestId(within) : page;
-        // Visible text or, for icon-only controls (rail icons, trash cans), the aria-label.
+        // Visible text or, for icon-only controls (rail icons, trash cans), the aria-label. Nodes under an
+        // inert underlay (the screen a sheet route keeps mounted beneath it) are unreachable, as on Android.
         // Exact matches win (Android `hasText` is exact): `data-channel-name`, then whole-text,
         // then aria-label for icon-only controls; substring text is the last resort ("1:00" vs "-11:00").
-        const focusables = scope.locator('[data-focus-id]');
+        const focusables = scope.locator(REACHABLE);
         const exact = new RegExp(`^\\s*${text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`);
         const fallback = focusables.filter({ hasText: text });
         const preferred = [
-          scope.locator(`[data-focus-id][data-channel-name="${text}"]`),
+          scope.locator(`${REACHABLE}[data-channel-name="${text}"]`),
           focusables.filter({ hasText: exact }),
-          scope.locator(`[data-focus-id][aria-label="${text}"]`),
+          scope.locator(`${REACHABLE}[aria-label="${text}"]`),
         ];
         let node = fallback;
         for (const candidate of preferred) {

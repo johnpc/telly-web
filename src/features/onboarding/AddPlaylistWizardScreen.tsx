@@ -2,7 +2,6 @@ import type { JSX } from 'react';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { finishEpg, pastePlaylistUrl, setEpgUrl } from './addPlaylistEpg';
 import { type WizardSession, useAddPlaylistWizard } from './useAddPlaylistWizard';
-import { DP_STYLE } from './wizardDims';
 import { WizardEpgStepScreen } from './WizardEpgStepScreen';
 import { WizardGuidanceScreen } from './WizardGuidanceScreen';
 import { WizardNameStepScreen } from './WizardNameStepScreen';
@@ -64,7 +63,6 @@ export function AddPlaylistWizardScreen(): JSX.Element {
     <FocusScope id="wizard" onBack={session.exit}>
       <div
         className="flex h-full w-full bg-telly-onboarding-bg text-telly-text"
-        style={DP_STYLE}
         data-testid="wizard"
         data-step={session.state.step}
       >

@@ -127,3 +127,61 @@ npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:80
   (3) "autostart on boot" has no web meaning and is shown disabled with that
   explanation; (4) CH+/CH− arrive as `ChannelUp/Down` on TV browsers and
   `PageUp/PageDown` elsewhere.
+- **2026-11-22** Cross-platform polish pass (screens verified by Playwright
+  screenshots at 1920×1080, 1280×720 and 390×844 portrait with the soft
+  remote). **(1) One length unit.** `--dp` now lives on `:root`
+  (`min(100vw/960, 100vh/540)`, 2 px at 1080p) and the root font-size is
+  `8 × --dp` (1 rem = 8 dp), so the rem-based screens (info overlay, panel,
+  search, settings, VOD, history, …) scale uniformly with the dp-based guide
+  and wizard instead of staying 1080p-sized at 720p. **Phone-portrait
+  rules:** the canvas is 390 dp wide (`--dp = 100vw/390`, 1 px per dp on a
+  390 px phone — text never drops under 12 px); the `portrait:` variant
+  reflows screens for that width rather than shrinking them; the soft remote
+  is sized in device pixels (finger targets do not scale) and reserves its
+  height at the bottom of the shell (`--soft-remote-inset`) so it never covers
+  the focused row; fullscreen video letterboxes into what is left; the guide
+  degrades to fewer columns (`GuideDims`: 170 dp channel column without
+  numbers, a 160×90 dp preview in a 108 dp strip, the remaining width as the
+  time viewport — ~1.4 half-hour columns on a 390 px phone — and as many rows
+  as fit); the panel hides the programme column and the detail logo; the
+  wizard hides its guidance pane. The same `GuideDims` also widens the grid on
+  ultra-wide landscape screens. `src/core/design/canvas.ts` is the JS mirror
+  of the CSS rule (keep both in step). **(2) Focus text on focus pills.**
+  Tailwind emits `text-telly-text` after `text-telly-focus-text`, so a node
+  carrying both kept light text on the light pill (settings rows, history,
+  menu sheets, …). The `focused:` custom variant (`[data-focused="true"]`,
+  the engine's own marker) outranks the resting colour; use
+  `focused:text-telly-focus-text`, never a bare `text-telly-focus-text` next
+  to a resting text colour. **(3) Focus engine restores the opener.** Every
+  pushed scope records the node focused at push time; a pop — or a modal whose
+  nodes all unregister while it unmounts (ref cleanup runs before the scope's
+  effect cleanup) — restores that opener first, then the layer's memory, and
+  geometric recovery only applies to a node vanishing inside a scope that is
+  still alive. The `useFocusAnchor` workarounds in search / My list /
+  reminders are gone. **(4) Settings is a sheet over the live screen.** The
+  shell (`ScreenStackScreen`) keeps the route beneath `Settings` mounted —
+  `inert`, `aria-hidden`, its key handlers on a muted router — so the 60 %
+  scrim dims the live guide (preview still playing) or player exactly as on
+  Android. **(5) Now/next first paint.** `useNowNext` seeds from the shared
+  in-memory `NowNextCache` (per EPG id, validity = nothing it knows has
+  started or ended) and only trusts a live result for the exact (ids,
+  instant) it answers — Dexie keeps returning the previous query's value while
+  a new one runs, which painted dashes after a group/visibility change. While
+  a genuinely unknown set resolves the panel shows no programme text, no
+  progress track and no "No information" (`PanelModel.epgPending`). **(6)
+  Guide header labels** hang into the channel column like Android's unclipped
+  `Box` (no more "0 PM" at the grid's left edge). **(7) Hint toast copy:** the
+  third line names the web's real day-jump key — `Rewind (,)` — because a held
+  arrow auto-repeats in browsers (Android: "Long Left"); layout and style are
+  unchanged. **(8)** Every `RouteKind` has a screen, so the route placeholder
+  `ComingSoonScreen` was unreachable and is deleted; the remaining
+  "Coming soon to telly" surfaces (transport row's timeshift / previous
+  programme during live playback, the cell dropdown's and search dropdown's
+  "Program description", Remind / My list on an EPG-less cell, the voice orb)
+  are exactly the ones Android shows. `Exited` stays web-only (no launcher).
+  **(9) Performance** (production build, Chromium, 1080p, `.scratch`-style
+  probe with a MutationObserver from the keydown): BACK → first guide cells
+  30–39 ms, OK → fullscreen route + surface 3–17 ms, ArrowDown → focused row
+  moved ≤ 2 ms, zero long tasks — nothing near the 300 ms bar, so no
+  memoization pass was warranted; the grid already renders only the visible
+  band + one overscan row.

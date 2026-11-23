@@ -4,7 +4,6 @@ import { useNavigator } from '@/core/navigation/useNavigator';
 import { RESTORE_PILL_ID } from './useRestoreOffer';
 import { useWelcomeRestore } from './useWelcomeRestore';
 import { WelcomePillScreen } from './WelcomePillScreen';
-import { DP_STYLE } from './wizardDims';
 
 /** First-run landing screen; pixel-matched to reference screen 02-welcome. */
 export function WelcomeScreen(): JSX.Element {
@@ -13,8 +12,7 @@ export function WelcomeScreen(): JSX.Element {
   return (
     <FocusScope id="welcome" autoFocus="first">
       <div
-        className="flex h-full w-full flex-col items-center justify-center bg-telly-onboarding-bg pt-[calc(6*var(--dp))]"
-        style={DP_STYLE}
+        className="flex h-full w-full flex-col items-center justify-center bg-telly-onboarding-bg px-[calc(16*var(--dp))] pt-[calc(6*var(--dp))] text-center"
         data-testid="welcome-screen"
       >
         <h1 className="text-[calc(20*var(--dp))] leading-[calc(28*var(--dp))] font-normal text-telly-text">

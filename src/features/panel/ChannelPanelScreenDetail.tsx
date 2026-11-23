@@ -32,29 +32,36 @@ function TimesLine({ row }: { row: PanelRow }): JSX.Element {
  * logo, programme title with the favorite star at the right edge, times +
  * dash + remaining with the group name right-aligned, then the description.
  */
-export function ChannelPanelScreenDetail({ row, logo }: { row: PanelRow; logo: LogoStyle }): JSX.Element {
+interface DetailProps {
+  row: PanelRow;
+  logo: LogoStyle;
+  /** The now/next read has not answered yet: the programme block stays blank (no "No information"). */
+  pending?: boolean;
+}
+
+export function ChannelPanelScreenDetail({ row, logo, pending = false }: DetailProps): JSX.Element {
   return (
     <div data-testid="panel-detail" className="flex px-6 py-4">
       <LogoTile
         logoUrl={row.channel.logoUrl}
         name={displayName(row.channel)}
-        sizeClass="h-[8.75rem] w-[8.75rem]"
+        sizeClass="h-[8.75rem] w-[8.75rem] portrait:hidden"
         textClass="text-5xl"
         style={logo}
       />
-      <div className="ml-8 flex min-w-0 flex-1 flex-col gap-2">
+      <div className="ml-8 flex min-w-0 flex-1 flex-col gap-2 portrait:ml-0">
         <div className="flex items-start">
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <span className="truncate text-[2.125rem] font-semibold text-white">
-              {row.nowTitle ?? 'No information'}
+              {pending ? '' : (row.nowTitle ?? 'No information')}
             </span>
-            <TimesLine row={row} />
+            {!pending && <TimesLine row={row} />}
           </div>
           <span aria-hidden className="ml-6 text-[2.5rem] leading-none text-white">
             {row.channel.favorite ? '★' : '☆'}
           </span>
         </div>
-        {row.description !== null && (
+        {!pending && row.description !== null && (
           <p
             data-testid="panel-detail-description"
             className="line-clamp-2 text-[1.625rem] text-telly-text-muted"

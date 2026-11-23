@@ -2,26 +2,28 @@ import type { JSX } from 'react';
 import { displayName } from '@/core/db/types';
 import { LogoTileScreen } from './LogoTileScreen';
 import { sp } from './guideCss';
-import { CHANNEL_COLUMN_DP, dp } from './guideGeometry';
+import { dp } from './guideGeometry';
 import type { GuideRow } from './guideModel';
 
 interface ColumnProps {
   row: GuideRow;
   playing: boolean;
   showNumber: boolean;
+  /** The column's width on this canvas (`GuideDims.channelColumnDp`). */
+  widthDp: number;
 }
 
 /**
  * The grid row's fixed channel column: number, 45×30 dp logo tile and the
  * (custom) display name, accent blue + ▶ while previewed (capture 32).
  */
-export function GuideChannelColumnScreen({ row, playing, showNumber }: ColumnProps): JSX.Element {
+export function GuideChannelColumnScreen({ row, playing, showNumber, widthDp }: ColumnProps): JSX.Element {
   const accent = playing ? 'text-telly-playback-accent' : '';
   const name = displayName(row.channel);
   return (
     <div
       className="flex h-full shrink-0 items-center"
-      style={{ width: dp(CHANNEL_COLUMN_DP), paddingLeft: dp(16), paddingRight: dp(10) }}
+      style={{ width: dp(widthDp), paddingLeft: dp(16), paddingRight: dp(10) }}
     >
       {showNumber && (
         <span

@@ -2,7 +2,7 @@ import { type ComponentProps, type JSX, useEffect } from 'react';
 import { Focusable } from '@/core/focus/Focusable';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { focusEngine } from '@/core/focus/focusEngine';
-import { DP_ROOT_STYLE, dp, sp } from '@/features/groups/toolCss';
+import { dp, sp } from '@/features/groups/toolCss';
 import { SearchIcon, SettingsIcon } from '@/features/guide/GuideIconsScreen';
 import { type SheetFlags, type SheetItem, type SheetSection, sheetLabel, sheetRowId } from './sheetMenu';
 
@@ -36,7 +36,7 @@ function SheetRow({ item, flags, focusPrefix, onItem }: RowProps & { item: Sheet
       focusId={sheetRowId(focusPrefix, item)}
       className="flex items-center gap-[0.8em] rounded-[4px] text-telly-text"
       style={{ height: dp(40), fontSize: sp(15), margin: `0 ${dp(8)}`, padding: `0 ${dp(16)}` }}
-      focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
       data-testid="menu-row"
       onClick={() => onItem(item)}
     >
@@ -87,7 +87,7 @@ export function SheetScreen({
       {scrim && <div className="absolute inset-0 bg-black/60" />}
       <div
         className="absolute z-30 flex flex-col overflow-y-auto rounded-[4px] bg-telly-menu-sheet"
-        style={{ ...DP_ROOT_STYLE, top: dp(8), right: dp(8), bottom: dp(8), width: dp(256) }}
+        style={{ top: dp(8), right: dp(8), bottom: dp(8), width: dp(256) }}
         data-testid="channel-menu"
       >
         {sections.map((section, index) => (

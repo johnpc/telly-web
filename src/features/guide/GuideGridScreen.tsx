@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
 import { GuideRowScreen } from './GuideRowScreen';
 import type { GuideController } from './guideController';
-import { CHANNEL_COLUMN_DP, TIME_VIEWPORT_DP, dp } from './guideGeometry';
+import { dp } from './guideGeometry';
 import type { GuideRow } from './guideModel';
 import type { GuideStyle } from './guideStyle';
 import { nowLineOffset } from './guideTimeline';
@@ -23,12 +23,15 @@ const OVERSCAN = 1;
  * thin now-line runs down the grid at the sampled "now".
  */
 export function GuideGridScreen({ controller, rows, style, playingId }: GridProps): JSX.Element {
-  const { engine, originMs, now } = controller;
+  const { engine, originMs, now, dims } = controller;
   const focus = engine.focus;
   const first = Math.max(0, engine.firstRow - OVERSCAN);
-  const last = Math.min(rows.length, engine.firstRow + style.visibleRows + OVERSCAN + 1);
+  const last = Math.min(
+    rows.length,
+    engine.firstRow + Math.max(style.visibleRows, dims.gridRows) + OVERSCAN + 1,
+  );
   const dimFocus = controller.layer.kind === 'Groups';
-  const nowX = nowLineOffset(now, originMs, engine.scrollX, TIME_VIEWPORT_DP);
+  const nowX = nowLineOffset(now, originMs, engine.scrollX, dims.timeViewportDp);
   return (
     <div className="relative min-h-0 flex-1 overflow-hidden" data-testid="guide-grid">
       <div
@@ -49,6 +52,7 @@ export function GuideGridScreen({ controller, rows, style, playingId }: GridProp
               originMs={originMs}
               nowMs={now}
               style={style}
+              dims={dims}
             />
           );
         })}
@@ -56,7 +60,7 @@ export function GuideGridScreen({ controller, rows, style, playingId }: GridProp
       {nowX !== null && (
         <div
           className="pointer-events-none absolute inset-y-0 bg-telly-now-line"
-          style={{ left: dp(CHANNEL_COLUMN_DP + nowX), width: dp(1) }}
+          style={{ left: dp(dims.channelColumnDp + nowX), width: dp(1) }}
           data-testid="now-line"
         />
       )}

@@ -56,7 +56,7 @@ export function GuideGroupsScreen({ controller, channels, custom }: GroupsProps)
               focusId={groupFocusId(group)}
               className={`flex shrink-0 items-center truncate rounded-[4px] text-telly-text ${group === selected ? 'bg-telly-button-resting' : ''}`}
               style={{ height: dp(36), paddingLeft: dp(16), paddingRight: dp(16), fontSize: sp(18) }}
-              focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+              focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
               aria-selected={group === selected}
               data-testid={`panel-group-${group}`}
               data-selected={group === selected ? 'true' : 'false'}

@@ -21,9 +21,9 @@ import './settings.css';
  * The settings surface (device-verified 2026-09-13): ONE 360 dp right sheet
  * over the dimmed underlying screen. The root sheet lists the sections; OK
  * replaces it in place with the section's sheet; BACK pops one sheet, and
- * from the root leaves settings (`navigator.pop()`). The web shell keeps
- * only the top route mounted, so the dimmed underlay is the app background
- * under the 60 % scrim rather than the live guide. Every overlay owns the
+ * from the root leaves settings (`navigator.pop()`). The shell keeps the
+ * route beneath mounted (inert) so the 60 % scrim dims the LIVE guide or
+ * player behind the sheet, as on Android. Every overlay owns the
  * screen: the sheet is dropped while one is up and its focus memory
  * restores the row when the overlay closes.
  */
@@ -42,7 +42,7 @@ export function SettingsScreen(): JSX.Element {
   const pane = activePane(state);
   return (
     <FocusScope id="settings" trap autoFocus={false} onBack={onBack}>
-      <div className="relative h-full w-full bg-telly-background" data-testid="settings-root">
+      <div className="relative h-full w-full" data-testid="settings-root">
         {state.overlay === null ? (
           <SettingsSheetScreen
             title={paneTitle(pane, feeds)}

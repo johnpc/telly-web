@@ -20,7 +20,7 @@ export function IconCircle({ focusId, icon, label, onClick, testId }: IconCircle
       data-testid={testId}
       onClick={onClick}
       className="flex h-[5rem] w-[5rem] items-center justify-center rounded-full text-white"
-      focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
     >
       <Icon name={icon} className="h-[2.75rem] w-[2.75rem]" />
     </Focusable>

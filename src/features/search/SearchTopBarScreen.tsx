@@ -24,7 +24,7 @@ interface SearchTopBarProps {
 export function SearchTopBarScreen(props: SearchTopBarProps): JSX.Element {
   const { ref, props: focusProps } = useFocusable(SEARCH_IDS.query);
   return (
-    <div className="flex items-center gap-[8.75rem] pt-[3.25rem] pr-[3rem] pl-[7rem]">
+    <div className="flex items-center gap-[8.75rem] pt-[3.25rem] pr-[3rem] pl-[7rem] portrait:gap-[2rem] portrait:pr-[2rem] portrait:pl-[2rem]">
       <Focusable
         focusId={SEARCH_IDS.orb}
         as="button"

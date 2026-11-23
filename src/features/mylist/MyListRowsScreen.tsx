@@ -29,7 +29,7 @@ function MyListRowScreen({ row, onClick }: { row: MyListScreenRow; onClick(): vo
       onClick={onClick}
       data-testid="mylist-row"
       className="flex h-[4.875rem] items-center gap-[1.5rem] rounded-[0.5rem] px-[1rem]"
-      focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
     >
       <LogoTile
         logoUrl={row.channel.logoUrl}

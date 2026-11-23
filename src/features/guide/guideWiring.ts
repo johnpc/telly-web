@@ -9,6 +9,7 @@ import { createGroupToolStore } from '@/features/groups/groupToolStore';
 import { GroupTools } from '@/features/groups/groupTools';
 import type { TuneController } from '@/features/playback/tune';
 import { GuideController } from './guideController';
+import type { GuideDims } from './guideGeometry';
 import { type GuideSeams, createGuideSeams } from './guideSeams';
 
 /** Everything the guide controller needs from the composition root (Android `GuideDeps` + `PlaybackEnv`). */
@@ -26,6 +27,8 @@ export interface GuideControllerDeps {
   onFullscreen: () => void;
   /** False exactly once after a cold start with "last channel on start" off. */
   tunesPreview: boolean;
+  /** The grid's layout on the current canvas (default: the 1080p reference). */
+  dims?: GuideDims | undefined;
 }
 
 export interface GuideWiring {
@@ -33,6 +36,7 @@ export interface GuideWiring {
   settings: SettingsRepository;
   navigator: Navigator;
   tunesPreview: boolean;
+  dims?: GuideDims | undefined;
 }
 
 /** The production controller over the app's repositories and `localStorage`. */
@@ -50,5 +54,6 @@ export function createGuideController(wiring: GuideWiring): GuideController {
     open: (route) => wiring.navigator.push(route),
     onFullscreen: () => wiring.navigator.push({ kind: 'Playback' }),
     tunesPreview: wiring.tunesPreview,
+    dims: wiring.dims,
   });
 }

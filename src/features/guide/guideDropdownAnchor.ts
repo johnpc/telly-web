@@ -1,4 +1,4 @@
-import { CHANNEL_COLUMN_DP, GRID_HEIGHT_DP, TIME_VIEWPORT_DP, xOf } from './guideGeometry';
+import { GRID_HEIGHT_DP, type GuideDims, TV_DIMS, xOf } from './guideGeometry';
 import { GUIDE_CELL_ACTIONS, type GuideFocus } from './guideModel';
 import { clamp } from './guideWindowMath';
 
@@ -20,9 +20,10 @@ export function dropdownAnchor(
   originMs: number,
   scrollXDp: number,
   rowHeightDp: number,
+  dims: GuideDims = TV_DIMS,
 ): GuideAnchor {
   const cellX = xOf(focus.cell.startMs, originMs) - scrollXDp;
-  const xDp = CHANNEL_COLUMN_DP + clamp(cellX, 0, TIME_VIEWPORT_DP - MENU_WIDTH_DP);
+  const xDp = dims.channelColumnDp + clamp(cellX, 0, dims.timeViewportDp - MENU_WIDTH_DP);
   const rowBottom = (focus.rowIndex - firstVisibleRow + 1) * rowHeightDp;
   return { xDp, yDp: clamp(rowBottom, 0, Math.max(GRID_HEIGHT_DP - MENU_HEIGHT_DP, 0)) };
 }

@@ -35,7 +35,7 @@ export function RecordingRowScreen({
       data-status={row.status}
       onClick={onClick}
       className="flex h-[4.875rem] w-full items-center gap-[1.25rem] rounded px-[1rem] text-left text-telly-text"
-      focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
     >
       {row.status === 'RECORDING' && <RecBadge />}
       <span className="flex-1 truncate text-[1.875rem]" data-testid="recording-title">

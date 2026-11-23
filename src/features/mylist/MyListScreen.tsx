@@ -1,7 +1,6 @@
 import type { JSX } from 'react';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { useNavigator } from '@/core/navigation/useNavigator';
-import { useFocusAnchor } from '@/features/search/focusAnchor';
 import {
   MY_LIST_EMPTY,
   MY_LIST_REMOVE_HINT,
@@ -24,11 +23,6 @@ export function MyListScreen({ deps = defaultMyListDeps }: { deps?: MyListDeps }
   const navigator = useNavigator();
   const model = useMyList(deps);
   const actions = useMyListActions(model);
-  const restoreFocus = useFocusAnchor(actions.described !== null);
-  const closeDescription = (): void => {
-    actions.closeDescription();
-    restoreFocus();
-  };
   return (
     <FocusScope id="mylist" onBack={() => navigator.pop()}>
       <div
@@ -38,7 +32,7 @@ export function MyListScreen({ deps = defaultMyListDeps }: { deps?: MyListDeps }
         <MyListChromeScreen hasRows={(model.rows?.length ?? 0) > 0} />
         <MyListBodyScreen rows={model.rows} onRow={actions.onRow} />
         {actions.described !== null && (
-          <MyListDescriptionScreen row={actions.described} onClose={closeDescription} />
+          <MyListDescriptionScreen row={actions.described} onClose={actions.closeDescription} />
         )}
       </div>
     </FocusScope>

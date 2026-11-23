@@ -1,6 +1,5 @@
 import type { JSX } from 'react';
 import { FocusScope } from '@/core/focus/FocusScope';
-import { useFocusAnchor } from './focusAnchor';
 import { useDeferredDown } from './useDeferredDown';
 import { useNavigator } from '@/core/navigation/useNavigator';
 import { SearchChannelsScreen } from './SearchChannelsScreen';
@@ -28,7 +27,6 @@ export function SearchScreen({ deps = searchDeps }: { deps?: SearchDeps }): JSX.
   const model = useSearchResults(deps);
   const history = useSearchHistory(deps.history);
   const overlay = useSearchOverlay(deps.overlays);
-  const restoreFocus = useFocusAnchor(overlay.kind !== 'None');
   const actions = useSearchActions(deps, model, history);
   useDeferredDown(model);
   return (
@@ -54,7 +52,7 @@ export function SearchScreen({ deps = searchDeps }: { deps?: SearchDeps }): JSX.
         ) : (
           <SearchResultsScreen model={model} actions={actions} />
         )}
-        <SearchOverlayScreen overlay={overlay} overlays={deps.overlays} restoreFocus={restoreFocus} />
+        <SearchOverlayScreen overlay={overlay} overlays={deps.overlays} />
       </div>
     </FocusScope>
   );

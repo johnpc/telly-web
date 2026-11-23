@@ -12,6 +12,8 @@ interface RowProps {
   logo: LogoStyle;
   /** Focus id LEFT lands on (the selected group). */
   leftTarget: string;
+  /** The now/next read has not answered yet: no programme text, no progress track. */
+  pending?: boolean;
   onFocus(): void;
   onClick(): void;
 }
@@ -26,6 +28,7 @@ export function ChannelPanelScreenRow({
   playing,
   logo,
   leftTarget,
+  pending = false,
   onFocus,
   onClick,
 }: RowProps): JSX.Element {
@@ -43,7 +46,7 @@ export function ChannelPanelScreenRow({
       onFocusCapture={onFocus}
       onClick={onClick}
       className="flex h-[4.875rem] shrink-0 items-center rounded-lg px-4"
-      focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
     >
       <span data-testid="row-number" className={`w-14 shrink-0 text-[1.875rem] ${tone}`}>
         {row.displayNumber}
@@ -55,7 +58,10 @@ export function ChannelPanelScreenRow({
         textClass="text-base"
         style={logo}
       />
-      <span data-testid="row-name" className={`ml-5 w-[16.25rem] shrink-0 truncate text-[1.875rem] ${tone}`}>
+      <span
+        data-testid="row-name"
+        className={`ml-5 w-[16.25rem] shrink-0 truncate text-[1.875rem] portrait:w-auto portrait:min-w-0 portrait:flex-1 `}
+      >
         {name}
       </span>
       {row.channel.blocked && (
@@ -68,15 +74,20 @@ export function ChannelPanelScreenRow({
         </span>
       )}
       {playing && <span className="ml-2 text-[1.375rem] text-telly-playback-accent">▶</span>}
-      <span data-testid="row-programme" className="ml-5 min-w-0 flex-1 truncate text-[1.75rem] opacity-70">
-        {row.nowTitle ?? ''}
+      <span
+        data-testid="row-programme"
+        className="ml-5 min-w-0 flex-1 truncate text-[1.75rem] opacity-70 portrait:hidden"
+      >
+        {pending ? '' : (row.nowTitle ?? '')}
       </span>
-      <ProgressBar
-        permille={row.progressPermille}
-        widthClass="w-20"
-        heightClass="h-1"
-        fillClass="bg-telly-playback-accent"
-      />
+      {!pending && (
+        <ProgressBar
+          permille={row.progressPermille}
+          widthClass="w-20"
+          heightClass="h-1"
+          fillClass="bg-telly-playback-accent"
+        />
+      )}
     </Focusable>
   );
 }

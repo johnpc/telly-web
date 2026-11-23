@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GUIDE_ROOT_STYLE, SCRIM_COLOR, guideBackground, sp } from './guideCss';
+import { SCRIM_COLOR, guideBackground, sp } from './guideCss';
 import { GEAR_ID, groupFocusId, inGroupsPane } from './guideKeyRouting';
 import { msToNextMinute, startMinuteTicker } from './guideNowTicker';
 
@@ -9,7 +9,6 @@ describe('guideCss', () => {
     expect(guideBackground(1)).toBe('rgba(19, 22, 25, 1)');
     expect(guideBackground(0.9)).toBe('rgba(19, 22, 25, 0.9)');
     expect(SCRIM_COLOR).toBe('rgba(0, 0, 0, 0.6)');
-    expect(GUIDE_ROOT_STYLE).toHaveProperty('--dp');
     expect(groupFocusId('All channels')).toBe('guide-group-All channels');
     expect(GEAR_ID).toBe('guide-rail-settings');
     expect(inGroupsPane(GEAR_ID)).toBe(true);

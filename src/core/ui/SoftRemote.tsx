@@ -2,8 +2,9 @@ import type { JSX, PointerEvent } from 'react';
 import { SOFT_REMOTE_BAR, SOFT_REMOTE_PAD, type SoftRemoteButton } from './softRemoteLayout';
 import { useSoftRemote, type SoftRemoteState } from './useSoftRemote';
 
+/** Finger-sized in DEVICE pixels: a touch target must not shrink with the dp canvas. */
 const BUTTON =
-  'flex h-11 min-w-11 items-center justify-center rounded-lg bg-white/15 px-2 text-sm font-semibold text-white active:bg-white/35 select-none';
+  'flex h-[40px] min-w-[40px] items-center justify-center rounded-[8px] bg-white/15 px-[6px] text-[13px] leading-none font-semibold text-white active:bg-white/35 select-none';
 
 /** Keep taps on the pad from stealing DOM focus (and the engine's focus ring) from the content. */
 function keepFocus(e: PointerEvent<HTMLElement>): void {
@@ -50,17 +51,17 @@ export function SoftRemote(): JSX.Element | null {
     <div
       data-testid="soft-remote"
       data-state={remote.open ? 'open' : 'closed'}
-      className="fixed right-4 bottom-4 z-50 flex flex-col items-end gap-2"
+      className="fixed right-[12px] bottom-[12px] z-50 flex flex-col items-end gap-[8px]"
       onPointerDown={keepFocus}
     >
       {remote.open && (
-        <div className="flex flex-col gap-2 rounded-2xl bg-black/70 p-3 shadow-xl backdrop-blur">
+        <div className="flex flex-col gap-[6px] rounded-[14px] bg-black/70 p-[8px] shadow-xl backdrop-blur">
           <PadGroup
             buttons={SOFT_REMOTE_PAD}
-            className="grid grid-cols-3 grid-rows-3 gap-1"
+            className="grid grid-cols-3 grid-rows-3 gap-[4px]"
             remote={remote}
           />
-          <PadGroup buttons={SOFT_REMOTE_BAR} className="flex gap-1" remote={remote} />
+          <PadGroup buttons={SOFT_REMOTE_BAR} className="flex gap-[4px]" remote={remote} />
         </div>
       )}
       <button

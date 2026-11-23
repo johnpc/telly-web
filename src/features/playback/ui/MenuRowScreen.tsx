@@ -21,7 +21,7 @@ export function MenuRow({ focusId, label, onClick, icon, checked, testId }: Menu
       data-testid={testId}
       onClick={onClick}
       className="flex h-[5rem] w-full items-center gap-[1.5rem] rounded px-[2rem] text-left text-[1.875rem] text-telly-text"
-      focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
     >
       {icon !== undefined && <Icon name={icon} className="h-[2.25rem] w-[2.25rem]" />}
       {checked !== undefined && (

@@ -1,7 +1,6 @@
 import type { JSX } from 'react';
 import type { Route, RouteKind } from '@/core/navigation/routes';
 import { BootScreen } from './BootScreen';
-import { ComingSoonScreen } from './ComingSoonScreen';
 import { ExitedScreen } from './ExitedScreen';
 import { HistoryScreen } from '@/features/history/HistoryScreen';
 import { ChannelNamesEditorScreen } from '@/features/channelmenu/ChannelNamesEditorScreen';
@@ -20,11 +19,8 @@ import { VodScreen } from '@/features/vod/VodScreen';
 
 type ScreenFactory = (route: Route) => JSX.Element;
 
-/**
- * Route → screen registry. Each feature slice adds its entry as it lands;
- * unported routes render the placeholder so navigation never dead-ends.
- */
-const SCREENS: Partial<Record<RouteKind, ScreenFactory>> = {
+/** Route → screen registry, total over `RouteKind`: every Android route has its web screen. */
+const SCREENS: Record<RouteKind, ScreenFactory> = {
   Boot: () => <BootScreen />,
   Exited: () => <ExitedScreen />,
   Playback: () => <PlaybackScreen />,
@@ -47,6 +43,5 @@ const SCREENS: Partial<Record<RouteKind, ScreenFactory>> = {
 };
 
 export function screenFor(route: Route): JSX.Element {
-  const factory = SCREENS[route.kind];
-  return factory === undefined ? <ComingSoonScreen route={route} /> : factory(route);
+  return SCREENS[route.kind](route);
 }

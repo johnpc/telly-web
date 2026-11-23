@@ -26,7 +26,7 @@ export function ChannelPanelScreenGroups({
   return (
     <nav
       data-testid="panel-groups"
-      className="flex w-[27.5rem] shrink-0 flex-col gap-2 overflow-y-auto px-8 pt-20 pb-8"
+      className="flex w-[27.5rem] shrink-0 flex-col gap-2 overflow-y-auto px-8 pt-20 pb-8 portrait:w-[14rem] portrait:px-3"
       role="listbox"
       aria-label="Groups"
     >
@@ -45,7 +45,7 @@ export function ChannelPanelScreenGroups({
             className={`flex h-[4.875rem] shrink-0 items-center gap-4 rounded-lg px-8 text-[1.875rem] ${
               isSelected ? 'bg-telly-button-resting' : ''
             }`}
-            focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+            focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
           >
             <span className="truncate">{group}</span>
             {locked.has(group) && (

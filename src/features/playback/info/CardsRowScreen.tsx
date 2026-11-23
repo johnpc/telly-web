@@ -65,7 +65,10 @@ export function CardsRow({
   actions: CardActions;
 }): JSX.Element {
   return (
-    <div className="flex gap-[0.125rem] overflow-x-hidden pl-[3.375rem]" data-testid="cards-row">
+    <div
+      className="flex gap-[0.125rem] overflow-x-hidden pl-[3.375rem] portrait:pl-[1rem]"
+      data-testid="cards-row"
+    >
       <IconCard id="tv-guide" icon="list" label="TV guide" onClick={actions.onGuide} />
       <IconCard id="history" icon="history" label="History" onClick={actions.onHistory} />
       <IconCard id="multiview" icon="multiview" label="Multiview" onClick={actions.onMultiview} />

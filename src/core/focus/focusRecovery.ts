@@ -45,12 +45,28 @@ export function autoFocusTarget(
   return firstUnder(view, scope);
 }
 
-/** Focused node vanished: nearest neighbour (by centre) in its scope, else in the active layer. */
+/**
+ * Focused node vanished: nearest neighbour (by centre) among what is left of its
+ * scope. A scope with nothing left is unmounting (a modal closing: its nodes
+ * unregister before its scope pops), so it is treated exactly like a pop —
+ * never a geometric guess over the layer beneath.
+ */
 export function recoveryTarget(view: RecoveryView, scope: string): string | null {
   const inScope = view.registry.entriesUnder(scope);
-  const pool = inScope.length > 0 ? inScope : view.registry.activeEntries();
-  if (view.lastRect === null) return pool[0]?.id ?? null;
-  return nearestByCenter(view.lastRect, pool.map(toCandidate));
+  if (inScope.length === 0) return poppedTarget(view, scope);
+  if (view.lastRect === null) return inScope[0]?.id ?? null;
+  return nearestByCenter(view.lastRect, inScope.map(toCandidate));
+}
+
+/** The node focused when `scope` was pushed, if it is still registered. */
+function openerOf(view: RecoveryView, scope: string): string | null {
+  const id = view.registry.openerOf(scope);
+  return id !== null && view.registry.get(id) !== undefined ? id : null;
+}
+
+/** `scope` popped: back to its opener, else what the newest remaining scope remembers. */
+export function poppedTarget(view: RecoveryView, scope: string): string | null {
+  return openerOf(view, scope) ?? rememberedTarget(view);
 }
 
 /** The element `scope` remembers, if it is still registered and reachable by arrows. */

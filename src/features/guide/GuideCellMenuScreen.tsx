@@ -5,7 +5,7 @@ import type { GuideController } from './guideController';
 import { cellActionLabel } from './guideCellLabels';
 import { sp } from './guideCss';
 import { MENU_ROW_DP, MENU_WIDTH_DP, dropdownAnchor } from './guideDropdownAnchor';
-import { GRID_TOP_DP, dp } from './guideGeometry';
+import { dp } from './guideGeometry';
 import { GUIDE_CELL_ACTIONS, type GuideRow } from './guideModel';
 import { useMyListKeys } from '@/features/mylist/myListToggle';
 import { useReminderKeys } from './useSheetKeys';
@@ -28,13 +28,24 @@ export function GuideCellMenuScreen({ controller, rows, rowHeightDp }: CellMenuP
   const focus = controller.engine.focus;
   if (layer.kind !== 'CellMenu' || focus === null) return null;
   const { engine, originMs } = controller;
-  const anchor = dropdownAnchor(focus, engine.firstRow, originMs, engine.scrollX, rowHeightDp);
+  const anchor = dropdownAnchor(
+    focus,
+    engine.firstRow,
+    originMs,
+    engine.scrollX,
+    rowHeightDp,
+    controller.dims,
+  );
   const state = { channel: rows[focus.rowIndex]?.channel, program: layer.cell.program, myList, reminders };
   return (
     <FocusScope id="guide-cell-menu" trap autoFocus="first">
       <ul
         className="absolute z-20 flex flex-col overflow-hidden rounded-[4px] bg-telly-menu-sheet shadow-xl"
-        style={{ left: dp(anchor.xDp), top: dp(GRID_TOP_DP + anchor.yDp), width: dp(MENU_WIDTH_DP) }}
+        style={{
+          left: dp(anchor.xDp),
+          top: dp(controller.dims.gridTopDp + anchor.yDp),
+          width: dp(MENU_WIDTH_DP),
+        }}
         data-testid="guide-cell-menu"
       >
         {GUIDE_CELL_ACTIONS.map((action) => (
@@ -44,7 +55,7 @@ export function GuideCellMenuScreen({ controller, rows, rowHeightDp }: CellMenuP
             focusId={`guide-cell-action-${action.replaceAll(' ', '-')}`}
             className="flex items-center text-telly-text"
             style={{ height: dp(MENU_ROW_DP), paddingLeft: dp(16), paddingRight: dp(16), fontSize: sp(15) }}
-            focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+            focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
             onClick={() => controller.parts.onCellAction(action)}
           >
             {cellActionLabel(action, state)}

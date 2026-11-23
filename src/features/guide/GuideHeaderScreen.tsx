@@ -1,7 +1,7 @@
 import type { JSX } from 'react';
 import type { GuideController } from './guideController';
 import { sp } from './guideCss';
-import { CHANNEL_COLUMN_DP, DP_PER_30_MIN, TIME_VIEWPORT_DP, dp } from './guideGeometry';
+import { DP_PER_30_MIN, dp } from './guideGeometry';
 import { type ClockStyle, clock } from './guideTimes';
 import { type GuideTick, nowLineOffset, ticks } from './guideTimeline';
 
@@ -18,7 +18,7 @@ interface TicksProps {
 /** The scrolling 30-min labels (centred on their tick) and the dot heading the now-line. */
 function TimelineTicks({ ticks: labels, nowX }: TicksProps): JSX.Element {
   return (
-    <div className="relative h-full flex-1 overflow-hidden" data-testid="guide-timeline">
+    <div className="relative h-full flex-1" data-testid="guide-timeline">
       {labels.map((tick) => (
         <span
           key={tick.offsetDp}
@@ -45,19 +45,23 @@ function TimelineTicks({ ticks: labels, nowX }: TicksProps): JSX.Element {
  */
 export function GuideHeaderScreen({ controller, clockStyle }: HeaderProps): JSX.Element {
   const scrollX = controller.engine.scrollX;
-  const { originMs, now } = controller;
+  const { originMs, now, dims } = controller;
   return (
     <div className="shrink-0" style={{ paddingTop: dp(12) }}>
       <div className="flex items-center" style={{ height: dp(27) }}>
         <div
-          className="shrink-0 text-telly-clock-blue"
-          style={{ width: dp(CHANNEL_COLUMN_DP), paddingLeft: dp(16), fontSize: sp(14) }}
+          className="shrink-0 truncate text-telly-clock-blue"
+          style={{
+            width: dp(dims.channelColumnDp),
+            paddingLeft: dp(16),
+            fontSize: sp(dims.compact ? 12 : 14),
+          }}
         >
           <span data-testid="guide-clock">{clock(now, clockStyle)}</span>
         </div>
         <TimelineTicks
-          ticks={ticks(originMs, scrollX, TIME_VIEWPORT_DP, clockStyle)}
-          nowX={nowLineOffset(now, originMs, scrollX, TIME_VIEWPORT_DP)}
+          ticks={ticks(originMs, scrollX, dims.timeViewportDp, clockStyle)}
+          nowX={nowLineOffset(now, originMs, scrollX, dims.timeViewportDp)}
         />
       </div>
       <div className="w-full bg-telly-pane-divider" style={{ height: dp(1), marginBottom: dp(2) }} />

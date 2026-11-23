@@ -16,7 +16,7 @@ function Badges({ badges }: { badges: readonly string[] }): JSX.Element {
       {badges.map((badge) => (
         <span
           key={badge}
-          className="rounded-[0.375rem] bg-telly-badge-fill px-[0.375rem] text-[1.375rem] font-bold text-telly-badge-text"
+          className="rounded-[0.375rem] bg-telly-badge-fill px-[0.375rem] text-[1.375rem] font-bold text-telly-badge-text portrait:text-[1.5rem]"
         >
           {badge}
         </span>
@@ -28,7 +28,7 @@ function Badges({ badges }: { badges: readonly string[] }): JSX.Element {
 /** The "02:30 — 03:45 PM  ▬▬  61 min  1  News One  [HD]" line. */
 function TimesLine({ data, showBadges }: Omit<InfoBlockProps, 'showDescription'>): JSX.Element {
   return (
-    <div className="flex items-center gap-[1.25rem] text-[1.875rem] text-telly-text-muted">
+    <div className="flex items-center gap-[1.25rem] text-[1.875rem] whitespace-nowrap text-telly-text-muted">
       {data.timeRange !== null && <span data-testid="info-range">{data.timeRange}</span>}
       <ProgressBar
         permille={data.progressPermille}
@@ -36,7 +36,7 @@ function TimesLine({ data, showBadges }: Omit<InfoBlockProps, 'showDescription'>
         className="h-[0.375rem] w-[5rem]"
       />
       {data.remaining !== null && <span>{data.remaining}</span>}
-      <span className="font-bold text-white" data-testid="info-channel">
+      <span className="truncate font-bold text-white" data-testid="info-channel">
         {channelLabel(data)}
       </span>
       {showBadges && <Badges badges={data.badges} />}
@@ -47,8 +47,8 @@ function TimesLine({ data, showBadges }: Omit<InfoBlockProps, 'showDescription'>
 /** Logo tile next to the programme lines (title, times/number/badges, optional description, next line). */
 export function InfoBlock({ data, showBadges, showDescription }: InfoBlockProps): JSX.Element {
   return (
-    <div className="flex items-center px-[5rem]">
-      <div className="flex w-[15.5rem] shrink-0 justify-center">
+    <div className="flex items-center px-[5rem] portrait:px-[2rem]">
+      <div className="flex w-[15.5rem] shrink-0 justify-center portrait:w-[12rem]">
         <LogoTile
           logoUrl={data.logoUrl}
           name={data.name}

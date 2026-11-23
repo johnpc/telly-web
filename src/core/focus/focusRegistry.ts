@@ -13,6 +13,8 @@ export interface ScopeSpec {
   id: string;
   parent: string | null;
   trap: boolean;
+  /** The node focused when the scope was pushed — where a pop returns to. */
+  opener?: string | null;
 }
 
 export type AutoFocus = 'first' | 'remembered' | false;
@@ -36,6 +38,7 @@ function domOrder(a: FocusEntry, b: FocusEntry): number {
 export class FocusRegistry {
   private readonly entries = new Map<string, FocusEntry>();
   private scopes: ScopeSpec[] = [];
+  private readonly openers = new Map<string, string | null>();
 
   add(entry: FocusEntry): void {
     this.entries.set(entry.id, entry);
@@ -51,6 +54,12 @@ export class FocusRegistry {
 
   pushScope(spec: ScopeSpec): void {
     this.scopes = [...this.scopes.filter((s) => s.id !== spec.id), spec];
+    this.openers.set(spec.id, spec.opener ?? null);
+  }
+
+  /** The opener recorded when `scope` was last pushed (kept past its pop: its nodes may vanish after it). */
+  openerOf(scope: string): string | null {
+    return this.openers.get(scope) ?? null;
   }
 
   popScope(id: string): void {

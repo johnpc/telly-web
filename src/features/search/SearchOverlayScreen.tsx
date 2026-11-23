@@ -18,19 +18,12 @@ export const COMING_SOON_SUBTITLE = 'Coming soon to telly';
 interface SearchOverlayProps {
   overlay: SearchOverlay;
   overlays: SearchOverlays;
-  /** Re-focuses the node that opened the overlay. */
-  restoreFocus(): void;
 }
 
 /** The search screen's transient overlays: the guide-cell dropdown and the branded coming-soon placeholder. */
-export function SearchOverlayScreen({
-  overlay,
-  overlays,
-  restoreFocus,
-}: SearchOverlayProps): JSX.Element | null {
+export function SearchOverlayScreen({ overlay, overlays }: SearchOverlayProps): JSX.Element | null {
   const close = (): void => {
     overlays.dismiss();
-    restoreFocus();
   };
   if (overlay.kind === 'ProgramMenu')
     return <SearchDropdownScreen hit={overlay.hit} overlays={overlays} close={close} />;

@@ -4,11 +4,15 @@ import { Observable } from '@/core/state/observable';
 export const HINT_KEY = 'guide.hint.shown';
 export const HINT_HIDE_AFTER_MS = 15_000;
 
-/** The first-open hint toast lines (captures 24/26/27): bold key, then the rest. */
+/**
+ * The first-open hint toast lines (captures 24/26/27): bold key, then the rest. Android's third
+ * line is "Long Left"; browsers auto-repeat a held arrow so the web's day jump is REWIND
+ * (MediaRewind / the `,` key) and the copy names that key instead.
+ */
 export const HINT_LINES: readonly (readonly [string, string])[] = [
   ['Long OK', 'open menu'],
   ['Left', 'show groups'],
-  ['Long Left', 'navigate to past programs'],
+  ['Rewind (,)', 'navigate to past programs'],
 ];
 
 /** True exactly once per install: the store remembers the toast was shown. */

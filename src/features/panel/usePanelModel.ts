@@ -27,6 +27,8 @@ export interface PanelModel {
   /** Scrim alpha over the video (Appearance -> Player -> Panels transparency). */
   scrim: number;
   logo: LogoStyle;
+  /** True until the now/next read for these rows has answered; rows show no programme text or progress meanwhile (never a dash). */
+  epgPending: boolean;
 }
 
 const NO_GUIDE: ReadonlyMap<string, NowNext> = new Map();
@@ -89,10 +91,10 @@ export function usePanelModel(
     [channels, selectedGroup, custom],
   );
   const ids = useMemo(() => epgIdsOf(groupChannels), [groupChannels]);
-  const guide = useNowNext(ids, atMs, deps.guide) ?? NO_GUIDE;
+  const guide = useNowNext(ids, atMs, deps.guide);
   const style = useMemo(() => ({ is24h: is24Raw(clockFormat) }), [clockFormat]);
   const rows = useMemo(
-    () => buildRows(groupChannels, selectedGroup, guide, atMs, style),
+    () => buildRows(groupChannels, selectedGroup, guide ?? NO_GUIDE, atMs, style),
     [groupChannels, selectedGroup, guide, atMs, style],
   );
   return {
@@ -102,5 +104,6 @@ export function usePanelModel(
     clockText: ProgramTimes.clock(atMs, style),
     scrim: scrimAlpha(transparency),
     logo: { background: logoBackground(logoLabel), rounded },
+    epgPending: guide === undefined,
   };
 }

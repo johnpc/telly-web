@@ -1,15 +1,16 @@
 // Spatial-navigation focus engine over real DOM nodes. One focused element at
 // a time; arrows pick the geometrically best neighbour inside the active scope
 // layer; a trap scope (modal) confines them; each scope remembers its last
-// focused element so popping a modal restores where the user was.
+// focused element, and every pushed scope records which node opened it, so
+// popping a modal lands back on its opener before any geometric recovery.
 // @stateMachine('Focus engine')
 import type { Direction } from '../input/remoteKeys';
 import { focusElement } from './focusDom';
 import {
   autoFocusTarget,
   moveTarget,
+  poppedTarget,
   recoveryTarget,
-  rememberedTarget,
   type RecoveryView,
 } from './focusRecovery';
 import { FocusRegistry, type FocusEntry, type FocusScopeSpec } from './focusRegistry';
@@ -48,13 +49,14 @@ export class FocusEngine {
 
   /** Pushes a scope on the stack; the returned function pops it and restores focus beneath. */
   pushScope(spec: FocusScopeSpec): () => void {
-    this.registry.pushScope({ id: spec.id, parent: spec.parent ?? null, trap: spec.trap ?? false });
+    const { id, parent = null, trap = false } = spec;
+    this.registry.pushScope({ id, parent, trap, opener: this.focusedId });
     const mode = spec.autoFocus ?? 'remembered';
     const target = autoFocusTarget(this.view(), spec.id, mode, this.activeFocused() !== undefined);
     if (target !== null) this.focus(target);
     return () => {
       this.registry.popScope(spec.id);
-      this.defer(() => this.settle(() => rememberedTarget(this.view())));
+      this.defer(() => this.settle(() => poppedTarget(this.view(), spec.id)));
     };
   }
 
@@ -97,7 +99,11 @@ export class FocusEngine {
   }
 
   private view(): RecoveryView {
-    return { registry: this.registry, remembered: this.remembered, lastRect: this.lastRect };
+    return {
+      registry: this.registry,
+      remembered: this.remembered,
+      lastRect: this.lastRect,
+    };
   }
 
   /** The focused entry, provided it is registered and inside the active layer. */

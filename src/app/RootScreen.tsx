@@ -6,12 +6,12 @@ import { useRoute } from '@/core/navigation/useRoute';
 import { SoftRemote } from '@/core/ui/SoftRemote';
 import { RecordingsHost } from '@/features/recording';
 import { RemindersHost } from '@/features/reminders';
+import { ScreenStackScreen } from './ScreenStackScreen';
 import { useApplyAppearance, useConfigAutoBackup } from '@/features/settings';
-import { screenFor } from './screens';
 import { useBackgroundRefresh } from './useBackgroundRefresh';
 import { useStartRoute } from './useStartRoute';
 
-/** Hosts the current route's screen; BACK at the root is the web "exit" (the `Exited` route). */
+/** Hosts the route stack's screens; BACK at the root is the web "exit" (the `Exited` route). */
 export function RootScreen(): JSX.Element {
   const navigator = useNavigator();
   const route = useRoute();
@@ -27,9 +27,7 @@ export function RootScreen(): JSX.Element {
   return (
     <RemoteKeysProvider onBack={onBack}>
       <FocusScope id="app">
-        <div className="h-full w-full" data-testid="app-root" data-route={route.kind}>
-          {screenFor(route)}
-        </div>
+        <ScreenStackScreen />
       </FocusScope>
       <RemindersHost />
       <RecordingsHost />

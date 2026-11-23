@@ -3,7 +3,6 @@ import type { ChannelRow, ProgramRow } from '@/core/db/types';
 import { type GuideQueryDeps, defaultGuideDeps, useProgramsInRange } from '@/features/epg/useProgramsInRange';
 import type { CustomGroup } from '@/features/groups/customGroups';
 import type { GuideController } from './guideController';
-import { TIME_VIEWPORT_DP } from './guideGeometry';
 import type { GuideRow } from './guideModel';
 import { buildRows, channelsIn, epgIdsOf, groupNames } from './guideRowsBuilder';
 import { type GuideSpan, materializeSpan } from './guideWindowMath';
@@ -14,7 +13,8 @@ const NO_ROWS: GuideRow[] = [];
 function useGuideSpan(controller: GuideController): GuideSpan {
   const { originMs } = controller;
   const scrollX = controller.engine.scrollX;
-  return useMemo(() => materializeSpan(originMs, scrollX, TIME_VIEWPORT_DP), [originMs, scrollX]);
+  const viewportDp = controller.dims.timeViewportDp;
+  return useMemo(() => materializeSpan(originMs, scrollX, viewportDp), [originMs, scrollX, viewportDp]);
 }
 
 /** Keeps the controller's group list valid and hands it every rows emission. */

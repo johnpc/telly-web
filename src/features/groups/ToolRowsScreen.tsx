@@ -45,7 +45,7 @@ export function ToolRowsScreen({ rows, focusPrefix, onActivate }: ToolRowsProps)
               activatable(row) ? 'text-telly-text' : 'text-telly-text-disabled'
             }`}
             style={{ minHeight: dp(48) }}
-            focusedClassName="bg-telly-settings-focus-fill text-telly-focus-text"
+            focusedClassName="bg-telly-settings-focus-fill focused:text-telly-focus-text"
             tabIndex={activatable(row) ? -1 : undefined}
             aria-disabled={!activatable(row)}
             role={row.kind === 'toggle' ? 'switch' : undefined}

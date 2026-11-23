@@ -1,5 +1,13 @@
 @import 'tailwindcss';
 
+/* `focused:` = the node the focus engine marks (`data-focused="true"`). The extra attribute
+   selector outranks a resting utility on the same node, so `text-telly-text focused:text-telly-focus-text`
+   flips reliably — plain class order does not (Tailwind emits `text-telly-text` last). */
+@custom-variant focused (&[data-focused='true']);
+
+/* `portrait:` = phone-portrait reflow (the 390 dp canvas below). */
+@custom-variant portrait (@media (orientation: portrait));
+
 /* Design tokens — the same values as the Android app's core/design/Tokens.kt
    (sampled from TiviMate reference captures). Keep both files in step. */
 @theme {
@@ -46,7 +54,19 @@
   /* Settings → Appearance → Color theme writes --telly-accent; Font size writes --telly-font-scale. */
   --telly-accent: #2196f3;
   --telly-font-scale: 1;
-  font-size: calc(16px * var(--telly-font-scale));
+  /* The one length unit: 1 dp = 2 px on the 1920×1080 reference and it shrinks
+     uniformly with the viewport (1280×720 → 4/3 px), so every screen — dp-based
+     guide geometry and rem-based layouts alike (1 rem = 8 dp) — scales as a whole. */
+  --dp: min(calc(100vw / 960), calc(100vh / 540));
+  font-size: calc(8 * var(--dp) * var(--telly-font-scale));
+}
+
+/* Portrait phones: a 390 dp-wide canvas (1 px per dp on a 390 px phone) keeps text
+   ≥ 12 px; screens reflow for the narrow width instead of shrinking. */
+@media (orientation: portrait) {
+  :root {
+    --dp: calc(100vw / 390);
+  }
 }
 
 html,
@@ -54,6 +74,13 @@ body,
 #root {
   height: 100%;
   margin: 0;
+}
+
+/* The soft remote (touch devices) reserves its height at the bottom so it never covers the focused row. */
+#root {
+  box-sizing: border-box;
+  padding-bottom: var(--soft-remote-inset, 0px);
+  background: var(--color-telly-background);
 }
 
 body {

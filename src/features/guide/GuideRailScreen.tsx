@@ -90,7 +90,7 @@ export function GuideRailScreen({ controller, groupsFocusId }: RailProps): JSX.E
               marginTop: gear ? undefined : dp(24),
               marginBottom: gear ? dp(16) : undefined,
             }}
-            focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+            focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
             data-focus-up={focusIdOf(index - 1)}
             data-focus-down={focusIdOf(index + 1)}
             data-focus-left={focusIdOf(index)}

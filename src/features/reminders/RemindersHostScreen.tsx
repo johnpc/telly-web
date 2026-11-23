@@ -3,7 +3,6 @@ import { Focusable } from '@/core/focus/Focusable';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { useNavigator } from '@/core/navigation/useNavigator';
 import { usePlaybackSession } from '@/features/playback/tune';
-import { useFocusAnchor } from '@/features/search/focusAnchor';
 import type { ReminderPopupData } from './reminderPopup';
 import { type RemindersHub, remindersHub } from './remindersHub';
 
@@ -20,18 +19,11 @@ export function RemindersHost({ hub = remindersHub }: { hub?: RemindersHub }): J
   return <ReminderPopupScreen popup={popup} hub={hub} dismiss={dismiss} />;
 }
 
-/** Runs the ticks while mounted; the popup state plus a dismiss that hands focus back. */
+/** Runs the ticks while mounted; the popup state plus its dismiss (the focus engine hands focus back to the opener). */
 function useRemindersPopup(hub: RemindersHub): { popup: ReminderPopupData | null; dismiss(): void } {
   useEffect(() => hub.start(), [hub]);
   const popup = useSyncExternalStore(hub.popup.subscribe, hub.popup.snapshot);
-  const restoreFocus = useFocusAnchor(popup !== null);
-  return {
-    popup,
-    dismiss: () => {
-      hub.popup.dismiss();
-      restoreFocus();
-    },
-  };
+  return { popup, dismiss: () => hub.popup.dismiss() };
 }
 
 interface PopupProps {
@@ -85,7 +77,7 @@ function PopupAction({ label, onClick }: { label: string; onClick(): void }): JS
       focusId={`reminder-${label.toLowerCase().replace(/\s+/g, '-')}`}
       onClick={onClick}
       className="flex h-[5.5rem] w-[40rem] items-center rounded-[0.5rem] bg-telly-button-resting px-[2rem] text-[2rem]"
-      focusedClassName="!bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="!bg-telly-focus-fill focused:text-telly-focus-text"
     >
       {label}
     </Focusable>

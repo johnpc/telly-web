@@ -8,6 +8,7 @@ import { KeyRouter } from '@/core/input/keyRouter';
 import { KeyRouterContext } from '@/core/input/keyRouterContext';
 import { MemoryKeyValueStore } from '@/core/kv/memoryKeyValueStore';
 import { Navigator } from '@/core/navigation/navigator';
+import { TV_DIMS } from './guideGeometry';
 import { NavigatorContext } from '@/core/navigation/navigatorContext';
 import type { PlayerEngine } from '@/core/player';
 import { SettingsContext } from '@/core/settings/settingsContext';
@@ -42,7 +43,7 @@ describe('useGuideController', () => {
     const startRoute = new StartRoute();
     startRoute.decide(2);
     const navigator = new Navigator({ kind: 'Guide' });
-    const { result, rerender } = renderHook(() => useGuideController(session(tuner)), {
+    const { result, rerender } = renderHook(() => useGuideController(session(tuner), TV_DIMS), {
       wrapper: ({ children }) => (
         <NavigatorContext value={navigator}>
           <SettingsContext value={new SettingsRepository(new MemoryKeyValueStore())}>

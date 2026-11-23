@@ -1,12 +1,14 @@
 import type { JSX } from 'react';
 import { type PlayerEngine, VideoSurface } from '@/core/player';
 import { sp } from './guideCss';
-import { dp } from './guideGeometry';
+import { COMPACT_TOP_STRIP_DP, dp } from './guideGeometry';
 import type { GuideInfoData } from './guideInfoBuilder';
 
 interface TopProps {
   engine: PlayerEngine;
   info: GuideInfoData | null;
+  /** Portrait phone: a 160×90 dp preview in a 108 dp strip. */
+  compact?: boolean;
 }
 
 /** The dash-progress pill + remaining minutes shown for airing cells only (capture 24). */
@@ -33,7 +35,10 @@ function RemainingPill({ info }: { info: GuideInfoData }): JSX.Element | null {
 /** Times line: range, the airing pill, and the channel's group right-aligned under the star. */
 function InfoTimesLine({ info }: { info: GuideInfoData }): JSX.Element {
   return (
-    <div className="flex items-center text-telly-text-muted" style={{ fontSize: sp(15), marginTop: dp(6) }}>
+    <div
+      className="flex flex-wrap items-center whitespace-nowrap text-telly-text-muted"
+      style={{ fontSize: sp(15), marginTop: dp(6) }}
+    >
       <span data-testid="guide-info-range">{info.range}</span>
       <RemainingPill info={info} />
       <span className="flex-1" />
@@ -76,17 +81,19 @@ function GuideInfoPane({ info }: { info: GuideInfoData | null }): JSX.Element {
 }
 
 /** Top strip (uidump 24): a 320×180 dp live preview at the left, the focused programme's info pane at the right. */
-export function GuideTopScreen({ engine, info }: TopProps): JSX.Element {
+export function GuideTopScreen({ engine, info, compact = false }: TopProps): JSX.Element {
+  const preview = compact ? { width: dp(160), height: dp(90) } : { width: dp(320), height: dp(180) };
   return (
     <div
       className="flex shrink-0"
-      style={{ paddingLeft: dp(16), paddingTop: dp(12), paddingRight: dp(24), height: dp(192) }}
+      style={{
+        paddingLeft: dp(16),
+        paddingTop: dp(12),
+        paddingRight: dp(compact ? 12 : 24),
+        height: dp(compact ? COMPACT_TOP_STRIP_DP : 192),
+      }}
     >
-      <div
-        className="shrink-0 bg-black"
-        style={{ width: dp(320), height: dp(180) }}
-        data-testid="guide-preview"
-      >
+      <div className="shrink-0 bg-black" style={preview} data-testid="guide-preview">
         <VideoSurface engine={engine} />
       </div>
       <div style={{ width: dp(22) }} />

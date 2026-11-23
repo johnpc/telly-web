@@ -39,3 +39,42 @@ export function widthOf(startMs: number, endMs: number): number {
 export function dp(value: number): string {
   return `calc(${value} * var(--dp))`;
 }
+
+/** Portrait phones: a narrower channel column (number, logo, truncated name) and a compact 108 dp top strip. */
+export const NARROW_CHANNEL_COLUMN_DP = 170;
+export const COMPACT_TOP_STRIP_DP = 108;
+const HEADER_DP = GRID_TOP_DP - 192;
+
+/** The grid's layout on the current canvas: the channel column, the time viewport beside it, the grid's top and how many rows fit. */
+export interface GuideDims {
+  channelColumnDp: number;
+  timeViewportDp: number;
+  gridTopDp: number;
+  /** Rows the grid can show (never fewer than the reference 7; taller canvases fill up). */
+  gridRows: number;
+  /** Portrait phone: compact top strip, narrow channel column. */
+  compact: boolean;
+}
+
+/** The 1080p reference: 270 dp column + 690 dp viewport under the 234 dp top. */
+export const TV_DIMS: GuideDims = {
+  channelColumnDp: CHANNEL_COLUMN_DP,
+  timeViewportDp: TIME_VIEWPORT_DP,
+  gridTopDp: GRID_TOP_DP,
+  gridRows: VISIBLE_ROWS,
+  compact: false,
+};
+
+/** Fits the grid to a canvas: wider canvases show more time, taller ones more rows, portrait phones degrade to fewer columns. */
+export function dimsFor(canvas: { widthDp: number; heightDp: number; portrait: boolean }): GuideDims {
+  const compact = canvas.portrait;
+  const channelColumnDp = compact ? NARROW_CHANNEL_COLUMN_DP : CHANNEL_COLUMN_DP;
+  const gridTopDp = compact ? COMPACT_TOP_STRIP_DP + HEADER_DP : GRID_TOP_DP;
+  return {
+    channelColumnDp,
+    timeViewportDp: Math.max(DP_PER_30_MIN, canvas.widthDp - channelColumnDp),
+    gridTopDp,
+    gridRows: Math.max(VISIBLE_ROWS, Math.floor((canvas.heightDp - gridTopDp) / ROW_HEIGHT_DP)),
+    compact,
+  };
+}

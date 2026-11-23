@@ -6,7 +6,6 @@ import type { CSSProperties } from 'react';
  * viewport (2 px at 1080p, 1.33 px at 720p, and never wider than the 960 dp
  * reference canvas on narrow screens). Shared strings keep the panes aligned.
  */
-export const DP_STYLE = { '--dp': 'min(100vh / 540, 100vw / 960)' } as unknown as CSSProperties;
 
 /** Leanback guided-action labels render in Roboto Condensed. */
 export const CONDENSED_FONT: CSSProperties = {
@@ -14,10 +13,11 @@ export const CONDENSED_FONT: CSSProperties = {
 };
 
 export const WIZARD_DIMS = {
-  guidancePane: 'w-[calc(470*var(--dp))] shrink-0 pl-[calc(56*var(--dp))] pt-[calc(152*var(--dp))]',
+  guidancePane:
+    'w-[calc(470*var(--dp))] shrink-0 pl-[calc(56*var(--dp))] pt-[calc(152*var(--dp))] portrait:hidden',
   pane: 'flex h-full flex-col gap-[calc(8*var(--dp))] pl-[calc(20*var(--dp))] pt-[calc(189*var(--dp))]',
   buttonPane: 'w-[calc(152*var(--dp))] shrink-0',
-  actionWidth: 'w-[calc(298*var(--dp))]',
+  actionWidth: 'w-[calc(298*var(--dp))] max-w-full',
   buttonWidth: 'w-[calc(112*var(--dp))]',
   actionRow:
     'flex min-h-[calc(44*var(--dp))] items-center rounded-[calc(4*var(--dp))] px-[calc(14*var(--dp))] pt-[calc(14*var(--dp))] pb-[calc(11*var(--dp))] text-left',

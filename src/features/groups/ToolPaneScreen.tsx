@@ -1,6 +1,6 @@
 import type { JSX, ReactNode } from 'react';
 import { FocusScope } from '@/core/focus/FocusScope';
-import { DP_ROOT_STYLE, dp, sp } from './toolCss';
+import { dp, sp } from './toolCss';
 
 interface ToolPaneProps {
   scopeId: string;
@@ -20,7 +20,7 @@ interface ToolPaneProps {
 export function ToolPaneScreen({ scopeId, title, testId, children, onBack }: ToolPaneProps): JSX.Element {
   return (
     <FocusScope id={scopeId} trap autoFocus="first" {...(onBack === undefined ? {} : { onBack })}>
-      <div className="absolute inset-0" style={DP_ROOT_STYLE} data-testid="settings-sheet">
+      <div className="absolute inset-0" data-testid="settings-sheet">
         <section
           className="absolute flex flex-col overflow-hidden rounded-[4px] bg-telly-menu-sheet text-telly-text shadow-2xl"
           style={{ top: dp(8), right: dp(8), bottom: dp(8), width: dp(400) }}

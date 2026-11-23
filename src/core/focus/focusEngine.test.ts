@@ -286,3 +286,83 @@ describe('FocusEngine', () => {
     expect(engine.current).toBe('b');
   });
 });
+
+describe('FocusEngine: closing a modal returns to its opener', () => {
+  /** A world whose recovery work is queued, so a test can replay the DOM-commit orderings. */
+  function deferredWorld(): { engine: FocusEngine; root: HTMLElement; flush(): void } {
+    const queue: (() => void)[] = [];
+    const engine = new FocusEngine((work) => void queue.push(work));
+    const root = document.createElement('div');
+    document.body.appendChild(root);
+    return {
+      engine,
+      root,
+      flush: () => {
+        while (queue.length > 0) queue.shift()?.();
+      },
+    };
+  }
+
+  /** Opener `row` top-left, a decoy `gear` top-right, and a modal button placed right over the gear. */
+  function stage(w: ReturnType<typeof deferredWorld>): {
+    closeModal(order: 'nodes-first' | 'scope-first'): void;
+  } {
+    Element.prototype.scrollIntoView = vi.fn();
+    const popScreen = w.engine.pushScope({ id: 'screen', parent: null });
+    w.engine.register('row', 'screen', node(w.root, 'row', { x: 0, y: 0 }));
+    w.engine.register('gear', 'screen', node(w.root, 'gear', { x: 1000, y: 0 }));
+    w.engine.focus('row');
+    const popModal = w.engine.pushScope({ id: 'modal', parent: 'screen', trap: true, autoFocus: 'first' });
+    const unregister = w.engine.register('ok', 'modal', node(w.root, 'ok', { x: 1000, y: 10 }));
+    w.engine.focus('ok');
+    expect(w.engine.current).toBe('ok');
+    void popScreen;
+    return {
+      closeModal(order) {
+        if (order === 'nodes-first') {
+          unregister();
+          w.flush();
+          popModal();
+        } else {
+          popModal();
+          unregister();
+        }
+        w.flush();
+      },
+    };
+  }
+
+  it('restores the opener when the modal nodes unregister before the scope pops (ref cleanup first)', () => {
+    const w = deferredWorld();
+    stage(w).closeModal('nodes-first');
+    expect(w.engine.current).toBe('row');
+  });
+
+  it('restores the opener when the scope pops before its nodes unregister', () => {
+    const w = deferredWorld();
+    stage(w).closeModal('scope-first');
+    expect(w.engine.current).toBe('row');
+  });
+
+  it('falls back to the first of the layer when the opener and the memory are gone; a vanished node inside a live scope still recovers by geometry', () => {
+    const w = deferredWorld();
+    w.engine.pushScope({ id: 'screen', parent: null });
+    const dropRow = w.engine.register('row', 'screen', node(w.root, 'row', { x: 0, y: 0 }));
+    w.engine.register('gear', 'screen', node(w.root, 'gear', { x: 1000, y: 0 }));
+    w.engine.register('row2', 'screen', node(w.root, 'row2', { x: 0, y: 120 }));
+    w.engine.focus('row');
+    const popModal = w.engine.pushScope({ id: 'modal', parent: 'screen', trap: true, autoFocus: 'first' });
+    const dropA = w.engine.register('a', 'modal', node(w.root, 'a', { x: 1000, y: 10 }));
+    w.engine.register('b', 'modal', node(w.root, 'b', { x: 1000, y: 130 }));
+    w.engine.focus('a');
+    dropA();
+    w.flush();
+    expect(w.engine.current).toBe('b');
+    dropRow();
+    w.flush();
+    expect(w.engine.current).toBe('b');
+    popModal();
+    w.flush();
+    expect(w.engine.current).toBe('gear');
+  });
+});

@@ -83,7 +83,7 @@ export function SettingsRowScreen({ row, onActivate, transparent = false }: RowP
       data-row-id={row.id}
       onClick={() => onActivate(row.id)}
       className={`${ROW_CLASS} ${resting} text-telly-text`}
-      focusedClassName="bg-telly-settings-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-settings-focus-fill focused:text-telly-focus-text"
     >
       {(focused) => <Body row={row} focused={focused} locked={false} />}
     </Focusable>

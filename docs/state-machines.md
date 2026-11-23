@@ -20,11 +20,11 @@ tested · `implicit` = known gap, listed so nobody re-discovers it.
 
 ## Core
 
-| Machine              | States                                                                                                                                                                      | Owner                               | Status   | Tests                                    |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | -------- | ---------------------------------------- |
-| Navigator            | typed back stack (push / pop / replaceAll); web-only route `Exited` = where Android would `finish()` (BACK at the root replaces the stack with it, OK restarts from `Boot`) | `src/core/navigation/navigator.ts`  | explicit | `src/core/navigation/navigator.test.ts`  |
-| Long-press detection | Idle · Held · HoldFired                                                                                                                                                     | `src/core/input/holdKeyDetector.ts` | explicit | `src/core/input/holdKeyDetector.test.ts` |
-| Focus engine         | one focused node per scope stack; a modal scope traps every arrow                                                                                                           | `src/core/focus/focusEngine.ts`     | explicit | `src/core/focus/focusEngine.test.ts`     |
+| Machine              | States                                                                                                                                                                                                 | Owner                               | Status   | Tests                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | -------- | ---------------------------------------- |
+| Navigator            | typed back stack (push / pop / replaceAll); web-only route `Exited` = where Android would `finish()` (BACK at the root replaces the stack with it, OK restarts from `Boot`)                            | `src/core/navigation/navigator.ts`  | explicit | `src/core/navigation/navigator.test.ts`  |
+| Long-press detection | Idle · Held · HoldFired                                                                                                                                                                                | `src/core/input/holdKeyDetector.ts` | explicit | `src/core/input/holdKeyDetector.test.ts` |
+| Focus engine         | one focused node per scope stack; a modal scope traps every arrow; every pushed scope records its opener, which a pop (or the modal emptying while it unmounts) restores before any geometric recovery | `src/core/focus/focusEngine.ts`     | explicit | `src/core/focus/focusEngine.test.ts`     |
 
 ## Player and playback
 

@@ -4,6 +4,7 @@ import { useNavigator } from '@/core/navigation/useNavigator';
 import { useSettingsRepository } from '@/core/settings/settingsContext';
 import type { PlaybackSession } from '@/features/playback/tune';
 import type { GuideController } from './guideController';
+import type { GuideDims } from './guideGeometry';
 import { createGuideController } from './guideWiring';
 
 /**
@@ -11,7 +12,7 @@ import { createGuideController } from './guideWiring';
  * playback session and re-renders the host on every state change. The
  * cold-start decision is claimed here (exactly one guide tunes or not).
  */
-export function useGuideController(session: PlaybackSession): GuideController {
+export function useGuideController(session: PlaybackSession, dims: GuideDims): GuideController {
   const navigator = useNavigator();
   const settings = useSettingsRepository();
   const { startRoute } = useAppDeps();
@@ -21,6 +22,7 @@ export function useGuideController(session: PlaybackSession): GuideController {
       settings,
       navigator,
       tunesPreview: startRoute.guideTunesPreview(),
+      dims,
     }),
   );
   useSyncExternalStore(controller.subscribe, () => controller.version);

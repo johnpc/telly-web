@@ -37,7 +37,7 @@ export function ChannelPanelScreen({
     <div
       data-testid="channel-panel"
       data-group={selectedGroup}
-      className="fixed inset-0 flex font-sans text-telly-text"
+      className="absolute inset-0 flex font-sans text-telly-text"
       style={{ backgroundColor: `rgba(19, 22, 25, ${model.scrim})` }}
     >
       <ChannelPanelScreenGroups
@@ -59,10 +59,13 @@ export function ChannelPanelScreen({
                 playing={row.channel.id === playingChannelId}
                 logo={model.logo}
                 leftTarget={groupIdOf(selectedGroup)}
+                pending={model.epgPending}
                 onFocus={() => onRowFocused(index)}
                 onClick={() => onTune(row)}
               />
-              {index === focusIndex && <ChannelPanelScreenDetail row={row} logo={model.logo} />}
+              {index === focusIndex && (
+                <ChannelPanelScreenDetail row={row} logo={model.logo} pending={model.epgPending} />
+              )}
             </li>
           ))}
         </ul>

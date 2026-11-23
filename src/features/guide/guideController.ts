@@ -5,7 +5,7 @@ import { pastDaysOf, resumeFocus, visibleRowsOf } from './guideControllerFlows';
 import { type GuideParts, buildParts } from './guideControllerParts';
 import { GuideFocusEngine } from './guideFocusEngine';
 import { GuideFocusMemory } from './guideFocusMemory';
-import { halfHourFloor } from './guideGeometry';
+import { type GuideDims, TV_DIMS, halfHourFloor } from './guideGeometry';
 import { GuideGroupMemory } from './guideGroupMemory';
 import { type GuideKey, commandFor } from './guideKeyPolicy';
 import { keymapFrom } from './guideKeymap';
@@ -28,6 +28,7 @@ export type { GuideControllerDeps } from './guideWiring';
  */
 export class GuideController extends Observable {
   readonly originMs: number;
+  readonly dims: GuideDims;
   readonly engine: GuideFocusEngine;
   readonly menu: GuideMenuController;
   readonly exit = new ExitConfirm();
@@ -45,7 +46,9 @@ export class GuideController extends Observable {
     this.originMs = halfHourFloor(this.nowMs);
     this.resumePending = deps.tunesPreview;
     const visibleRows = (): number => visibleRowsOf(deps);
-    this.engine = new GuideFocusEngine(this.originMs, () => scrollFloorDp(pastDaysOf(deps)), visibleRows);
+    this.dims = deps.dims ?? TV_DIMS;
+    const floor = (): number => scrollFloorDp(pastDaysOf(deps));
+    this.engine = new GuideFocusEngine(this.originMs, floor, visibleRows, this.dims.timeViewportDp);
     this.groupMemory = new GuideGroupMemory(deps.store);
     const focusMemory = new GuideFocusMemory(this.engine, visibleRows, () => this.rows);
     this.menu = new GuideMenuController({
@@ -53,8 +56,7 @@ export class GuideController extends Observable {
       focusMemory,
     });
     this.parts = buildParts(this, deps);
-    const forward = (): void => this.notify();
-    [this.engine, this.menu, this.exit].forEach((source) => source.subscribe(forward));
+    [this.engine, this.menu, this.exit].forEach((source) => source.subscribe(() => this.notify()));
   }
 
   get rows(): readonly GuideRow[] {

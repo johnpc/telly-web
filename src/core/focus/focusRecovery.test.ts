@@ -9,7 +9,12 @@ describe('focusRecovery edge cases', () => {
     const root = document.createElement('div');
     document.body.appendChild(root);
     registry.add({ id: 'x', scope: 's', element: node(root, 'x', { x: 0, y: 0 }) });
-    const view = { registry, remembered: new Map<string, string>(), lastRect: null };
+    const view = {
+      registry,
+      remembered: new Map<string, string>(),
+      openers: new Map<string, string>(),
+      lastRect: null,
+    };
     expect(recoveryTarget(view, 's')).toBe('x');
     expect(recoveryTarget(view, 'other')).toBe('x');
     registry.remove('x');
@@ -23,7 +28,12 @@ describe('focusRecovery edge cases', () => {
     const root = document.createElement('div');
     document.body.appendChild(root);
     registry.add({ id: 'first', scope: 's', element: node(root, 'first', { x: 0, y: 0 }) });
-    const view = { registry, remembered: new Map([['s', 'gone']]), lastRect: null };
+    const view = {
+      registry,
+      remembered: new Map([['s', 'gone']]),
+      openers: new Map<string, string>(),
+      lastRect: null,
+    };
     expect(autoFocusTarget(view, 's', 'remembered', false)).toBe('first');
     expect(autoFocusTarget(view, 's', 'first', true)).toBe('first');
     expect(autoFocusTarget(view, 's', 'remembered', true)).toBeNull();

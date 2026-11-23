@@ -23,7 +23,7 @@ export function ExitedScreen(): JSX.Element {
         <Focusable
           focusId="exited-restart"
           className="rounded-full bg-telly-button-resting px-8 py-3 text-lg"
-          focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+          focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
           onClick={onRestart}
         >
           Start telly

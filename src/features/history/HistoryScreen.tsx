@@ -18,7 +18,7 @@ function Row({ row, onClick }: { row: HistoryRow; onClick: () => void }): JSX.El
       data-testid="history-row"
       onClick={onClick}
       className="flex h-[4.875rem] w-full items-center gap-[1.25rem] rounded px-[1rem] text-left text-telly-text"
-      focusedClassName="bg-telly-focus-fill text-telly-focus-text"
+      focusedClassName="bg-telly-focus-fill focused:text-telly-focus-text"
     >
       <LogoTile logoUrl={row.channel.logoUrl} name={row.name} className="h-[3rem] w-[3rem] text-[0.75rem]" />
       <span className="w-[22.5rem] truncate text-[1.875rem]" data-testid="history-row-name">

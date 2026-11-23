@@ -3,7 +3,7 @@ import { programTitle } from '@/features/epg/nowNext';
 import { GuideChannelColumnScreen } from './GuideChannelColumnScreen';
 import { type GuideCellPlacement, placeCell } from './guideCellLayout';
 import { sp } from './guideCss';
-import { TIME_VIEWPORT_DP, dp } from './guideGeometry';
+import { type GuideDims, dp } from './guideGeometry';
 import { type GuideCell, type GuideRow, NO_INFORMATION } from './guideModel';
 import type { GuideStyle } from './guideStyle';
 
@@ -17,6 +17,7 @@ interface RowProps {
   originMs: number;
   nowMs: number;
   style: GuideStyle;
+  dims: GuideDims;
 }
 
 interface CellProps {
@@ -59,7 +60,7 @@ function GuideCellScreen({ cell, placement, focused, dimFocus, past }: CellProps
  * cell strip clipped to the time viewport, only the exposed cells rendered.
  */
 export function GuideRowScreen(props: RowProps): JSX.Element {
-  const { row, focusedCell, playing, style } = props;
+  const { row, focusedCell, playing, style, dims } = props;
   return (
     <div
       className="absolute inset-x-0 flex items-center"
@@ -70,10 +71,15 @@ export function GuideRowScreen(props: RowProps): JSX.Element {
       data-playing={playing ? 'true' : undefined}
       data-focused-row={focusedCell !== null ? 'true' : undefined}
     >
-      <GuideChannelColumnScreen row={row} playing={playing} showNumber={style.showChannelNumbers} />
-      <div className="relative h-full flex-1 overflow-hidden" style={{ maxWidth: dp(TIME_VIEWPORT_DP) }}>
+      <GuideChannelColumnScreen
+        row={row}
+        playing={playing}
+        showNumber={style.showChannelNumbers && !dims.compact}
+        widthDp={dims.channelColumnDp}
+      />
+      <div className="relative h-full flex-1 overflow-hidden" style={{ maxWidth: dp(dims.timeViewportDp) }}>
         {row.cells.map((cell) => {
-          const placement = placeCell(cell, props.originMs, props.scrollXDp, TIME_VIEWPORT_DP);
+          const placement = placeCell(cell, props.originMs, props.scrollXDp, dims.timeViewportDp);
           if (placement === null) return null;
           return (
             <GuideCellScreen
