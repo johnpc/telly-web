@@ -14,7 +14,8 @@ into a TV; on a phone a soft D-pad is offered. There is no backend and there are
 
 ## Try it
 
-- Hosted: `https://johnpc.github.io/telly-web/` (static, no server).
+- Hosted: `https://telly.jpc.io/` (self-hosted) or `https://johnpc.github.io/telly-web/` (GitHub Pages). Both are the
+  same static build — there is no server; everything you enter stays in your browser.
 - Demo playlist (no provider needed): `https://johnpc.github.io/telly/playlist.m3u` —
   31 synthetic test-card channels, a 7-day EPG, catch-up, an HLS live channel and two
   VOD titles, regenerated daily by the Android repo's demo-site workflow.
@@ -33,6 +34,18 @@ if your provider does not, point **Settings → General → CORS proxy** at a pr
 | MENU                 | ContextMenu, `m`                       |
 | RW / FF / Play-Pause | media keys, `,` `.` `p`                |
 | Digits               | 0–9 (number entry zaps)                |
+
+## Self-host (Docker)
+
+The image `mrorbitman/telly-web` on Docker Hub is nginx serving the static build (amd64 + arm64).
+`:latest` tracks a green `main`; version tags follow releases.
+
+```sh
+docker run -d --name telly-web -p 127.0.0.1:8002:80 mrorbitman/telly-web:latest
+```
+
+See `docker/compose.example.yaml`. Put your own TLS reverse proxy in front for anything beyond
+localhost; the container itself has no auth and stores nothing.
 
 ## Development
 
