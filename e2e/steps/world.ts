@@ -39,6 +39,17 @@ export type RemotePress =
   | 'MediaTrackNext'
   | 'MediaPlayPause';
 
+/** Visible matches of `text` outside any `inert` subtree. */
+async function reachableTextCount(page: Page, text: string): Promise<number> {
+  return page
+    .getByText(text, { exact: false })
+    .evaluateAll(
+      (nodes) =>
+        nodes.filter((el) => el.closest('[inert]') === null && (el as HTMLElement).offsetParent !== null)
+          .length,
+    );
+}
+
 /** The start route has resolved: keys pressed before this would hit the bare Boot frame. */
 async function settled(page: Page): Promise<void> {
   const root = page.getByTestId('app-root');
@@ -117,11 +128,17 @@ export const test = base.extend<{ world: TellyWorld }>({
         const searchBar = await page.getByTestId('search-query').count();
         if (searchBar === 0) await page.keyboard.press('Enter');
       },
+      // Text under an `inert` underlay (the live screen beneath the settings sheet) is not
+      // what the viewer "sees": only the active layer counts, as on Android.
       async seeText(text) {
-        await expect(page.getByText(text, { exact: false }).first()).toBeVisible();
+        await expect
+          .poll(() => reachableTextCount(page, text), { message: `expected to see "${text}"` })
+          .toBeGreaterThan(0);
       },
       async notSeeText(text) {
-        await expect(page.getByText(text, { exact: false })).toHaveCount(0);
+        await expect
+          .poll(() => reachableTextCount(page, text), { message: `expected not to see "${text}"` })
+          .toBe(0);
       },
       async seedSetup(playlistUrl = `${FIXTURE_HOST}/playlist.m3u`) {
         await page.evaluate(async (url) => {
