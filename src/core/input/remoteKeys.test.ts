@@ -112,3 +112,15 @@ describe('key predicates', () => {
     expect(isDigit('BACK')).toBe(false);
   });
 });
+
+describe('TV browser key codes', () => {
+  it('maps webOS/Tizen numeric codes when the key name is missing', () => {
+    expect(decodeRemoteKey(event('Unidentified', { keyCode: 461 }))).toBe('BACK');
+    expect(decodeRemoteKey(event('', { keyCode: 10009 }))).toBe('BACK');
+    expect(decodeRemoteKey(event('', { keyCode: 427 }))).toBe('CHANNEL_UP');
+    expect(decodeRemoteKey(event('', { keyCode: 428 }))).toBe('CHANNEL_DOWN');
+    expect(decodeRemoteKey(event('', { keyCode: 10252 }))).toBe('PLAY_PAUSE');
+    expect(decodeRemoteKey(event('ArrowUp', { keyCode: 461 }))).toBe('UP');
+    expect(decodeRemoteKey(event('', { keyCode: 999 }))).toBeNull();
+  });
+});

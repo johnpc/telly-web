@@ -89,7 +89,24 @@ export function isTextEntryTarget(target: EventTarget | null): boolean {
 }
 
 /** The subset of `KeyboardEvent` the decoder reads; tests pass plain objects. */
-export type RemoteKeyEvent = Pick<KeyboardEvent, 'key' | 'target' | 'ctrlKey' | 'metaKey' | 'altKey'>;
+export type RemoteKeyEvent = Pick<KeyboardEvent, 'key' | 'target' | 'ctrlKey' | 'metaKey' | 'altKey'> &
+  Partial<Pick<KeyboardEvent, 'keyCode'>>;
+
+/**
+ * TV browsers that predate the named keys: LG webOS sends Back as 461 and the
+ * channel keys as 427/428 with an empty or "Unidentified" `key`; Samsung Tizen
+ * sends Back as 10009 (and 10182 for Exit), channel keys 427/428 as well.
+ */
+const KEY_CODE_TABLE: Readonly<Record<number, SimpleRemoteKey>> = {
+  461: 'BACK',
+  10009: 'BACK',
+  10182: 'BACK',
+  427: 'CHANNEL_UP',
+  428: 'CHANNEL_DOWN',
+  412: 'REWIND',
+  417: 'FAST_FORWARD',
+  10252: 'PLAY_PAUSE',
+};
 
 /**
  * Decodes one keyboard event. Returns null for anything that is not a remote
@@ -101,5 +118,5 @@ export function decodeRemoteKey(e: RemoteKeyEvent): RemoteKey | null {
   const types = e.key.length === 1 || e.key === 'Backspace';
   if (types && isTextEntryTarget(e.target)) return null;
   if (/^[0-9]$/.test(e.key)) return digit(Number(e.key));
-  return KEY_TABLE[e.key] ?? null;
+  return KEY_TABLE[e.key] ?? KEY_CODE_TABLE[e.keyCode ?? -1] ?? null;
 }

@@ -22,7 +22,7 @@ describe('mpegts configuration', () => {
       isLive: false,
       liveBufferLatencyChasing: false,
     });
-    expect(mpegtsConfig(true)).toMatchObject({ isLive: true, liveBufferLatencyChasing: true });
+    expect(mpegtsConfig(true)).toMatchObject({ isLive: true, liveBufferLatencyChasing: false });
   });
 
   it('maps MEDIA_INFO onto badge facts, tolerating missing fields', () => {

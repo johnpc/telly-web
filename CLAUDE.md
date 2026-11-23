@@ -221,3 +221,21 @@ npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:80
   from any alignment → mpegts.js; `#EXTM3U` → hls.js; `ftyp`/`moov`/`moof` → native),
   falling back to the Content-Type only for an undecided body. The reader is cancelled
   after 1504 bytes because a live pipe ignores Range and never ends.
+- **2026-11-23** Live playback smoothness (director: "playback stutters quite a
+  lot"). Measured on the real provider with a 60 s Playwright probe (buffered
+  runway sampled per second, `waiting` events, dropped frames): through the
+  stream proxy 11 rebuffers / 10 s frozen with 0.7 s average runway; direct 3
+  rebuffers / 1.3 s. Root cause was mpegts.js `liveBufferLatencyChasing` with a
+  3 s cap — the player seeked forward whenever more than 3 s accumulated, so a
+  jittery IPTV pipe lived on ~1 s of buffer. Now, like Android/TiviMate: no
+  chasing (the stream drifts at 1.0× over a deep buffer, source buffer trimmed
+  30–60 s behind the playhead), and a `BufferGate` (`src/core/player/bufferGate.ts`,
+  catalog row) ports Android's `PlayerTuning` runways from Settings → Playback →
+  Buffer size — Small 1.5 s to start / 5 s to resume after an underrun, Medium
+  2.5/5, Large 2.5/10; the gate's own pauses never count as the user's. After:
+  via proxy 1 rebuffer / 4 s frozen with a 4–6 s runway; direct 0 rebuffers.
+  Also: webOS/Tizen numeric key codes (461/10009 Back, 427/428 channel keys,
+  412/417 RW/FF, 10252 play/pause) decode when `key` is unnamed, and a web app
+  manifest (`public/manifest.webmanifest`, 192/512 icons) makes the site
+  installable — the input for PWABuilder (Xbox/Microsoft Store) and webOS/Tizen
+  web-app packaging.

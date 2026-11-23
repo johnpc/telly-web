@@ -2,11 +2,12 @@
 // worker and fed to MSE. The fixture channels are `.ts` FILES served with
 // Range support, so a HEAD probe decides the mode: a Content-Length means a
 // finite file (`isLive: false`, seekable); chunked / no length means a live
-// pipe (`isLive: true` + latency chasing). `lazyLoad` is off so a file keeps
+// pipe (`isLive: true`, no latency chasing — see mpegtsConfig). `lazyLoad` is off so a file keeps
 // streaming like a channel instead of pausing its download. The library is
 // imported on first use so the bundle stays small.
 import type Mpegts from 'mpegts.js';
 import type { LoadOptions } from './PlayerEngine';
+import { attachBufferGate, thresholdsFor } from './bufferGate';
 import {
   detailsOf,
   isLivePipe,
@@ -51,6 +52,7 @@ export class MpegtsTransport implements Transport {
   readonly kind = 'mpegts';
   readonly tracks: TrackSnapshot = NO_TRACKS;
   private player: Mpegts.Player | null = null;
+  private detachGate: () => void = () => undefined;
   private generation = 0;
 
   constructor(
@@ -68,11 +70,14 @@ export class MpegtsTransport implements Transport {
     const [lib, probe] = await Promise.all([this.loadLib(), this.probe(url)]);
     if (generation !== this.generation) return;
     this.player = startPlayer(lib, video, url, isLivePipe(options, probe), options, listener);
+    this.detachGate = attachBufferGate(video, options.buffer ?? thresholdsFor('Small')).detach;
     listener.onTracksChanged(NO_TRACKS);
   }
 
   stop(): void {
     this.generation += 1;
+    this.detachGate();
+    this.detachGate = () => undefined;
     const player = this.player;
     this.player = null;
     if (player === null) return;

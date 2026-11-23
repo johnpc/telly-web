@@ -14,6 +14,9 @@ import { sniffStream } from './urlProbe';
 import { createVideoElement } from './videoElement';
 import type { EngineDeps } from './engineDeps';
 import { WebPlayerEngine } from './webPlayerEngine';
+import { thresholdsFor } from './bufferGate';
+import { defaultSettingsRepository } from '@/core/settings/settingsContext';
+import { TellySettings } from '@/core/settings/tellySettings';
 
 export type EngineKind = TransportKind;
 
@@ -84,7 +87,11 @@ export function transportFactory(caps: EngineCapabilities, sniff?: Sniffer): Eng
 
 /** A ready-to-attach engine for the browser we are running in. */
 export function createEngine(deps: Partial<EngineDeps> = {}): WebPlayerEngine {
-  return new WebPlayerEngine({ transportFor: transportFactory(detectCapabilities()), ...deps });
+  return new WebPlayerEngine({
+    transportFor: transportFactory(detectCapabilities()),
+    bufferThresholds: () => thresholdsFor(defaultSettingsRepository.get(TellySettings.BUFFER_SIZE)),
+    ...deps,
+  });
 }
 
 /** The live-TV engine the guide preview and fullscreen player lease in turn. */

@@ -2,6 +2,7 @@
 // the deferred-work and observation hooks tests replace (Android's
 // `EngineSchedulers`). Prod defaults: setTimeout retries, a setInterval
 // watchdog, console telemetry under the `telly-play` tag.
+import type { BufferThresholds } from './bufferGate';
 import type { Schedule } from './engineReconnector';
 import { PlaybackTelemetry, consoleTelemetryLog } from './playbackTelemetry';
 import type { Ticker } from './stallWatchdog';
@@ -18,6 +19,8 @@ export interface EngineDeps {
   /** Health log sink; null silences telemetry. */
   telemetry?: PlaybackTelemetry | null;
   policy?: ReconnectPolicy;
+  /** Settings → Playback → Buffer size, read live per tune; default Small. */
+  bufferThresholds?: () => BufferThresholds;
 }
 
 export const setTimeoutSchedule: Schedule = (ms, task) => {

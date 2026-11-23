@@ -7,6 +7,8 @@ import type { ResizeMode } from './resizeMode';
 import type { StreamDetails } from './streamDetails';
 import type { TrackSnapshot } from './trackModels';
 
+import type { BufferThresholds } from './bufferGate';
+
 export interface LoadOptions {
   /**
    * The provider's per-playlist User-Agent. Browsers forbid setting the
@@ -18,6 +20,8 @@ export interface LoadOptions {
   startPositionMs?: number;
   /** Live channel (chase the edge on reconnect) vs finite archive/VOD. */
   live: boolean;
+  /** Start / post-stall runway for raw-TS pipes (Settings → Playback → Buffer size); engine-filled when absent. */
+  buffer?: BufferThresholds;
 }
 
 /** How the web can honour an audio-sync offset (positive = audio delayed). */

@@ -11,16 +11,23 @@ export function isLivePipe(options: LoadOptions, probe: UrlProbe): boolean {
   return options.live && probe.contentLength === null;
 }
 
-/** Worker demux, no lazy-load pause (a file streams like a channel), latency chasing only for live pipes. */
+/**
+ * Worker demux, no lazy-load pause (a file streams like a channel), and NO
+ * latency chasing: chasing capped the live buffer at ~3 s and seeked forward
+ * whenever more arrived, so a jittery provider stream rebuffered constantly
+ * (measured: 11 rebuffers / 60 s). Like Android/TiviMate the stream drifts at
+ * 1.0× over a deep buffer; the `BufferGate` adds the start / post-stall
+ * runway, and the source buffer is trimmed 30–60 s behind the playhead.
+ */
 export function mpegtsConfig(isLive: boolean): Mpegts.Config {
   return {
     enableWorker: true,
     lazyLoad: false,
     isLive,
-    liveBufferLatencyChasing: isLive,
-    liveBufferLatencyMaxLatency: 3,
-    liveBufferLatencyMinRemain: 1,
+    liveBufferLatencyChasing: false,
     autoCleanupSourceBuffer: true,
+    autoCleanupMaxBackwardDuration: 60,
+    autoCleanupMinBackwardDuration: 30,
   };
 }
 

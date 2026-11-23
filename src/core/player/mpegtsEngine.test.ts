@@ -69,7 +69,7 @@ describe('MpegtsTransport', () => {
     await transport.load(video, 'http://s/live', { live: true, startPositionMs: 1_500 }, listener());
     expect(fake.lib.createPlayer).toHaveBeenCalledWith(
       expect.objectContaining({ isLive: true }),
-      expect.objectContaining({ isLive: true, liveBufferLatencyChasing: true }),
+      expect.objectContaining({ isLive: true, liveBufferLatencyChasing: false }),
     );
     expect(fake.player.currentTime).toBe(0);
   });

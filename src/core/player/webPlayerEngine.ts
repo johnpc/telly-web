@@ -19,6 +19,7 @@ import { StreamTuner } from './streamTuner';
 import { TelemetryAnalytics } from './telemetryAnalytics';
 import { NO_TRACKS } from './trackModels';
 import { safePlay } from './videoElement';
+import { type BufferThresholds, thresholdsFor } from './bufferGate';
 import { VideoFeed } from './videoFeed';
 
 export class WebPlayerEngine extends ObservableEngine implements PlayerEngine {
@@ -29,9 +30,11 @@ export class WebPlayerEngine extends ObservableEngine implements PlayerEngine {
   private readonly feed: VideoFeed;
   private readonly ticker: Ticker | null;
   private unwire: () => void = () => undefined;
+  private readonly bufferThresholds: () => BufferThresholds;
 
   constructor(deps: EngineDeps) {
     super();
+    this.bufferThresholds = deps.bufferThresholds ?? ((): BufferThresholds => thresholdsFor('Small'));
     this.tuner = new StreamTuner(deps.transportFor);
     this.ticker = tickerOf(deps);
     this.telemetry = telemetryOf(deps);
@@ -66,7 +69,7 @@ export class WebPlayerEngine extends ObservableEngine implements PlayerEngine {
 
   /** Skips a re-load of the same stream (guide <-> fullscreen hand-over). */
   load(url: string, options: LoadOptions): void {
-    this.session.begin(url, options, this.paused);
+    this.session.begin(url, { buffer: this.bufferThresholds(), ...options }, this.paused);
     this.setPaused(false);
   }
 
