@@ -4,6 +4,7 @@ import { NO_TRACKS } from '@/core/player';
 /** A mutable `PlayerEngine` double for the VOD tests: writes are recorded, readings are plain fields. */
 export interface FakeVodEngine extends PlayerEngine {
   state: EngineState;
+  paused: boolean;
   positionMs: number;
   durationMs: number;
   calls: string[];
@@ -24,10 +25,22 @@ export function fakeVodEngine(): FakeVodEngine {
     attach: noop,
     video: null,
     moveVideoTo: noop,
-    load: (url, options) => record(`load:${url}@${options.startPositionMs ?? 0}`),
-    play: () => record('play'),
-    pause: () => record('pause'),
-    stop: () => record('stop'),
+    load: (url, options) => {
+      engine.paused = false;
+      record(`load:${url}@${options.startPositionMs ?? 0}`);
+    },
+    play: () => {
+      engine.paused = false;
+      record('play');
+    },
+    pause: () => {
+      engine.paused = true;
+      record('pause');
+    },
+    stop: () => {
+      engine.paused = false;
+      record('stop');
+    },
     release: () => record('release'),
     seekTo: (positionMs) => {
       engine.positionMs = positionMs;

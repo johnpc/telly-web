@@ -3,15 +3,15 @@ import type { PlaybackOverlay } from '@/features/playback/overlay/playbackOverla
 import { ArmedArchive } from './catchupArmed';
 import { CatchupPause, keyHostOf, routeCatchupKey } from './catchupControls';
 import { CatchupNeighbours } from './catchupNeighbours';
-import { PendingSeek, PositionStore } from './catchupPosition';
+import { PositionStore } from './catchupPosition';
 import { CatchupProgrammeHop } from './catchupProgrammeHop';
-import { type CatchupRequest, type CatchupState, durationOf } from './catchupSession';
+import { type CatchupRequest, type CatchupState, NO_SEEK, durationOf } from './catchupSession';
 import type { CatchupPlaybackDeps } from './catchupDeps';
 import type { CatchupSkip } from './skipSteps';
 
 /**
  * Catch-up playback mode inside the fullscreen player (Android
- * `CatchupPlayback`): Off · Playing(request, fromLive). Consumes the guide's
+ * `CatchupPlayback`): Off · Playing(request, fromLive, seek). Consumes the guide's
  * pending request, owns the seek keys (honouring the Remote-control
  * toggles), the transport's pause and programme hops, tracks the position
  * for the transport, and leaves the mode on BACK (to live when entered from
@@ -30,7 +30,6 @@ export class CatchupPlayback {
   readonly pause: CatchupPause;
   readonly hop: CatchupProgrammeHop;
   private readonly armed = new ArmedArchive();
-  private readonly pendingSeek = new PendingSeek();
 
   constructor(readonly deps: CatchupPlaybackDeps) {
     this.pause = new CatchupPause(
@@ -61,12 +60,15 @@ export class CatchupPlayback {
     };
   };
 
-  /** A finished archive returns to LIVE playback of the same channel; a seek issued before the media attached is replayed. Returns the unwatch. */
+  /** A finished archive returns to LIVE playback of the same channel; a seek latched before the media attached is replayed. Returns the unwatch. */
   watch(): () => void {
     return this.deps.engine.subscribe(() => {
       const kind = this.deps.engine.state.kind;
-      if (kind === 'Ended') this.toLive();
-      else if (kind === 'Playing' && this.state !== null) this.pendingSeek.replay(this.deps.engine);
+      if (kind === 'Ended') return this.toLive();
+      const active = this.state;
+      if (kind !== 'Playing' || active === null || active.seek.kind !== 'Pending') return;
+      this.deps.engine.seekTo(active.seek.positionMs);
+      this.armed.arm({ ...active, seek: NO_SEEK });
     });
   }
 
@@ -109,8 +111,7 @@ export class CatchupPlayback {
   }
 
   enter(request: CatchupRequest, fromLive: boolean): void {
-    this.armed.arm({ request, fromLive });
-    this.pendingSeek.clear();
+    this.armed.arm({ request, fromLive, seek: NO_SEEK });
     this.position.reset();
     this.deps.tuner.tune(request.channel, { catchupUrl: request.url });
     this.deps.showTransport();
@@ -126,7 +127,9 @@ export class CatchupPlayback {
 
   private seekTo(positionMs: number): void {
     this.deps.engine.seekTo(positionMs);
-    if (this.deps.engine.state.kind !== 'Playing') this.pendingSeek.arm(positionMs);
+    const active = this.state;
+    if (active !== null && this.deps.engine.state.kind !== 'Playing')
+      this.armed.arm({ ...active, seek: { kind: 'Pending', positionMs } });
     this.position.set(positionMs);
     this.deps.showTransport();
   }

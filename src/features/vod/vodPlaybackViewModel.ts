@@ -1,12 +1,12 @@
 import type { VodItemRow } from '@/core/db/types';
 import type { PlayerEngine } from '@/core/player';
-import { Observable } from '@/features/guide/observable';
+import { Observable } from '@/core/state/observable';
 import type { VodDeps } from './vodDeps';
-import { VodPlayerControls } from './vodPlayerControls';
+import { createVodControls, type VodPlayerControls } from './vodPlayerControls';
 import { VodPositionStore } from './vodPositionStore';
 import { offerResume } from './vodResumePolicy';
 import { resumePrompt, VOD_LOADING, VOD_PLAYING, type VodStage } from './vodStage';
-import { VodTransportVisibility } from './vodTransportVisibility';
+import { VISIT, type VodVisit, openWatch, stopWatch } from './vodVisit';
 
 const SAMPLE_MS = 500;
 const PERSIST_MS = 10_000;
@@ -15,7 +15,8 @@ const PERSIST_MS = 10_000;
  * VOD playback (ux-spec §VOD, Android `VodPlaybackViewModel`): loads the
  * item, offers Resume/Start-over when a stored position sits inside the
  * resume band, and persists the position on pause/exit and every ~10 s.
- * Transport keys live in `vodPlaybackKeys.ts`. The sole writer of `VodStage`.
+ * Transport keys live in `vodPlaybackKeys.ts`. The sole writer of `VodStage`
+ * and of the visit's `VodVisit` lifetime.
  */
 export class VodPlaybackViewModel extends Observable {
   readonly engine: PlayerEngine;
@@ -23,10 +24,7 @@ export class VodPlaybackViewModel extends Observable {
   private readonly store: VodPositionStore;
   private loaded: VodItemRow | null = null;
   private current: VodStage = VOD_LOADING;
-  private timers: ReturnType<typeof setInterval>[] = [];
-  private unsubscribeEngine: () => void = () => undefined;
-  private exited = false;
-  private released = false;
+  private visit: VodVisit = VISIT.OPEN;
 
   constructor(
     private readonly deps: VodDeps,
@@ -36,10 +34,11 @@ export class VodPlaybackViewModel extends Observable {
     super();
     this.engine = deps.engineFactory();
     this.store = new VodPositionStore(deps.positions, deps.rememberPosition, deps.clock);
-    const transport = new VodTransportVisibility(deps.transportTimeoutMs);
-    this.controls = new VodPlayerControls(this.engine, transport, () => void this.persist());
-    this.controls.subscribe(() => this.notify());
-    transport.subscribe(() => this.notify());
+    this.controls = createVodControls(this.engine, deps.transportTimeoutMs, {
+      persistOnPause: () => void this.persist(),
+      active: () => this.current.kind === 'Playing',
+      changed: () => this.notify(),
+    });
   }
 
   get item(): VodItemRow | null {
@@ -73,40 +72,38 @@ export class VodPlaybackViewModel extends Observable {
 
   /** BACK: persist the position (playing only), then pop the route. */
   async exit(): Promise<void> {
-    if (this.current.kind === 'Playing') await this.persist();
+    if (this.current.kind === 'Playing' && this.visit.kind === 'Open') await this.persist();
     this.leave();
   }
 
   /** Tears the visit down; a released ViewModel never loads or pops again. */
   release(): void {
-    this.released = true;
-    for (const timer of this.timers) clearInterval(timer);
-    this.timers = [];
-    this.unsubscribeEngine();
+    stopWatch(this.visit);
+    this.visit = VISIT.RELEASED;
     this.controls.transport.dispose();
     this.engine.release();
   }
 
   private play(fromMs: number): void {
-    if (this.loaded === null || this.exited || this.released) return;
+    if (this.loaded === null || this.visit.kind !== 'Open') return;
     this.setStage(VOD_PLAYING);
     this.engine.load(this.loaded.streamUrl, { live: false, startPositionMs: fromMs });
-    this.controls.begin();
-    this.watch();
+    this.controls.reveal();
+    if (this.visit.watch === null) this.visit = this.watch();
   }
 
-  /** Sampling + persistence loops and the media-end watcher. */
-  private watch(): void {
-    if (this.timers.length > 0) return;
-    this.timers = [
-      setInterval(() => this.controls.sample(), SAMPLE_MS),
-      setInterval(() => void this.persist(), PERSIST_MS),
-    ];
-    // Media end: the position row clears as finished and the route exits.
-    this.unsubscribeEngine = this.engine.subscribe(() => {
-      if (this.engine.state.kind !== 'Ended') return;
-      void this.store.finish(this.itemKey, this.controls.durationMs()).then(() => this.leave());
+  /** Media end: the position row clears as finished and the route exits. */
+  private watch(): VodVisit {
+    const watch = openWatch({
+      sampleMs: SAMPLE_MS,
+      persistMs: PERSIST_MS,
+      sample: () => this.controls.sample(),
+      persist: () => void this.persist(),
+      engine: this.engine,
+      onEnded: () =>
+        void this.store.finish(this.itemKey, this.controls.durationMs()).then(() => this.leave()),
     });
+    return { kind: 'Open', watch };
   }
 
   private persist(): Promise<void> {
@@ -118,9 +115,11 @@ export class VodPlaybackViewModel extends Observable {
     this.notify();
   }
 
+  /** The visit ends: its loops stop with it, then the route pops once. */
   private leave(): void {
-    if (this.exited || this.released) return;
-    this.exited = true;
+    if (this.visit.kind !== 'Open') return;
+    stopWatch(this.visit);
+    this.visit = VISIT.EXITED;
     this.onExit();
   }
 }

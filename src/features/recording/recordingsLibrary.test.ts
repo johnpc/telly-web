@@ -37,21 +37,19 @@ describe('RecordingsLibrary', () => {
     expect(library.confirm?.kind).toBe('Delete');
   });
 
-  it('accepting Stop marks the row stopped so an immediate OK plays instead of re-asking', async () => {
+  it('accepting Stop asks the center; the row then reads STOPPING, which OK plays instead of re-asking', async () => {
     const { library, center } = rig();
-    const recording = rowOf('RECORDING', 7);
-    library.onRowClick(recording);
+    library.onRowClick(rowOf('RECORDING', 7));
+    expect(library.mode.kind).toBe('Confirming');
     library.accept();
     expect(center.stop).toHaveBeenCalledWith(7);
-    expect(library.confirm).toBeNull();
-    library.onRowClick(recording);
+    expect(library.mode).toEqual({ kind: 'Browsing' });
+    library.onRowClick(rowOf('STOPPING', 7));
+    expect(library.playing?.entry.id).toBe(7);
+    library.dismissConfirm(); // not confirming: no-op
     expect(library.playing?.entry.id).toBe(7);
     library.stopPlaying();
-    // Once the store shows the row finalized the optimistic mark retires.
-    library.retainStopped([rowOf('DONE', 7)]);
-    library.onRowClick(rowOf('DONE', 7));
-    expect(library.playing?.entry.id).toBe(7);
-    library.retainStopped([]);
+    library.stopPlaying();
     library.accept(); // nothing pending: no-op
     expect(center.delete).not.toHaveBeenCalled();
     await Promise.resolve();

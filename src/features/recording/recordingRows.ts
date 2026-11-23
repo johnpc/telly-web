@@ -36,6 +36,8 @@ function detailOf(entry: RecordingRow, status: RecordingStatus): string {
       return 'Scheduled';
     case 'RECORDING':
       return 'Recording';
+    case 'STOPPING':
+      return 'Stopping';
     case 'FAILED':
       return 'Failed';
     case 'DONE':

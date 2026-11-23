@@ -1,4 +1,4 @@
-import { Observable } from '@/features/guide/observable';
+import { Observable } from '@/core/state/observable';
 import type { RecordingCenter } from './recordingCenter';
 import type { RecordingListRow } from './recordingRows';
 import type { RecordingStatus } from './recordingStatus';
@@ -46,76 +46,79 @@ export function stopConfirmCopy(channelName: string): { title: string; body: str
   };
 }
 
+// @stateMachine('Recordings library')
 /**
- * The Recordings library screen's state (Android `RecordingsViewModel`): the
- * confirm for stop/cancel/delete and which DONE capture is playing fullscreen.
- * Rows whose Stop was accepted count as stopped the moment the user confirms,
- * even while the capture closes its file — an immediate OK on the row must
- * play the capture, not reopen the stop confirm.
+ * The Recordings library screen's mode (Android `RecordingsViewModel`): ONE
+ * value — Browsing · Confirming(stop/cancel/delete) · Playing(row). A row's
+ * status comes from the row alone: a Stop the user accepted shows as the
+ * persisted STOPPING status, which OK plays like DONE (no optimistic copy).
  */
+export type LibraryMode =
+  | { readonly kind: 'Browsing' }
+  | { readonly kind: 'Confirming'; readonly confirm: RecordingsConfirm }
+  | { readonly kind: 'Playing'; readonly row: RecordingListRow };
+
+const BROWSING: LibraryMode = { kind: 'Browsing' };
+
+/** What OK asks for a row of this status. */
+function confirmFor(row: RecordingListRow): RecordingsConfirm | null {
+  const status: RecordingStatus = row.status;
+  if (status === 'DONE' || status === 'STOPPING') return null;
+  if (status === 'RECORDING') return { kind: 'Stop', row };
+  return status === 'SCHEDULED' ? { kind: 'Cancel', row } : { kind: 'Delete', row };
+}
+
 export class RecordingsLibrary extends Observable {
-  private stoppedIds = new Set<number>();
-  private pending: RecordingsConfirm | null = null;
-  private playingRow: RecordingListRow | null = null;
+  private current: LibraryMode = BROWSING;
 
   constructor(private readonly center: Pick<RecordingCenter, 'stop' | 'delete'>) {
     super();
   }
 
+  get mode(): LibraryMode {
+    return this.current;
+  }
+
   get confirm(): RecordingsConfirm | null {
-    return this.pending;
+    return this.current.kind === 'Confirming' ? this.current.confirm : null;
   }
 
   get playing(): RecordingListRow | null {
-    return this.playingRow;
+    return this.current.kind === 'Playing' ? this.current.row : null;
   }
 
-  /** The optimistic "stopped" marks live only until the row shows finalized. */
-  retainStopped(rows: readonly RecordingListRow[]): void {
-    this.stoppedIds = new Set(
-      [...this.stoppedIds].filter((id) =>
-        rows.some((row) => row.entry.id === id && row.status === 'RECORDING'),
-      ),
-    );
-  }
-
-  /** OK: play DONE captures, confirm stop/cancel/delete for the rest. */
+  /** OK: play DONE (and stopping) captures, confirm stop/cancel/delete for the rest. */
   onRowClick(row: RecordingListRow): void {
-    const status: RecordingStatus = this.stoppedIds.has(row.entry.id) ? 'DONE' : row.status;
-    if (status === 'DONE') this.playingRow = row;
-    else if (status === 'RECORDING') this.pending = { kind: 'Stop', row };
-    else if (status === 'SCHEDULED') this.pending = { kind: 'Cancel', row };
-    else this.pending = { kind: 'Delete', row };
-    this.notify();
+    const confirm = confirmFor(row);
+    this.set(confirm === null ? { kind: 'Playing', row } : { kind: 'Confirming', confirm });
   }
 
   /** Long-OK on any row: delete (file + row) after the confirm. */
   onRowLongClick(row: RecordingListRow): void {
-    this.pending = { kind: 'Delete', row };
-    this.notify();
+    this.set({ kind: 'Confirming', confirm: { kind: 'Delete', row } });
   }
 
   /** The confirm's affirmative action. */
   accept(): void {
-    const pending = this.pending;
-    if (pending === null) return;
-    this.pending = null;
-    const id = pending.row.entry.id;
-    if (pending.kind === 'Stop') {
-      this.stoppedIds.add(id);
-      void this.center.stop(id);
-    } else void this.center.delete(id);
-    this.notify();
+    if (this.current.kind !== 'Confirming') return;
+    const { confirm } = this.current;
+    this.set(BROWSING);
+    const id = confirm.row.entry.id;
+    if (confirm.kind === 'Stop') void this.center.stop(id);
+    else void this.center.delete(id);
   }
 
   dismissConfirm(): void {
-    this.pending = null;
-    this.notify();
+    if (this.current.kind === 'Confirming') this.set(BROWSING);
   }
 
   /** BACK from the capture player returns to the list. */
   stopPlaying(): void {
-    this.playingRow = null;
+    if (this.current.kind === 'Playing') this.set(BROWSING);
+  }
+
+  private set(next: LibraryMode): void {
+    this.current = next;
     this.notify();
   }
 }

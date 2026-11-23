@@ -3,31 +3,46 @@ import { JUMP_STEP_MS, SEEK_STEP_MS, VodPlayerControls } from './vodPlayerContro
 import { fakeVodEngine, type FakeVodEngine } from './vodTestSupport';
 import { VodTransportVisibility } from './vodTransportVisibility';
 
-function controlsOver(): { controls: VodPlayerControls; engine: FakeVodEngine; persisted: number[] } {
+function controlsOver(): {
+  controls: VodPlayerControls;
+  engine: FakeVodEngine;
+  persisted: number[];
+  arm: () => void;
+} {
   const engine = fakeVodEngine();
   const persisted: number[] = [];
   const transport = new VodTransportVisibility(() => 5_000);
-  const controls = new VodPlayerControls(engine, transport, () => persisted.push(engine.positionMs));
-  return { controls, engine, persisted };
+  let playing = false;
+  const controls = new VodPlayerControls(
+    engine,
+    transport,
+    () => persisted.push(engine.positionMs),
+    () => playing,
+  );
+  const arm = (): void => {
+    playing = true;
+    controls.reveal();
+  };
+  return { controls, engine, persisted, arm };
 }
 
 describe('VodPlayerControls', () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it('is inert until begin, which reveals the transport', () => {
-    const { controls, engine } = controlsOver();
+  it("is inert while the stage is not Playing; reveal shows the transport; pause is the engine's flag", () => {
+    const { controls, engine, arm } = controlsOver();
     controls.togglePause();
     controls.seekBy(SEEK_STEP_MS);
     expect(engine.calls).toEqual([]);
-    controls.begin();
+    arm();
     expect(controls.transport.visible).toBe(true);
     expect(controls.paused).toBe(false);
   });
 
   it('toggles pause, persisting on pause and keeping the transport up', () => {
-    const { controls, engine, persisted } = controlsOver();
-    controls.begin();
+    const { controls, engine, persisted, arm } = controlsOver();
+    arm();
     engine.positionMs = 7_000;
     controls.togglePause();
     expect(controls.paused).toBe(true);
@@ -42,8 +57,8 @@ describe('VodPlayerControls', () => {
   });
 
   it('seeks within 0..duration and samples the clock', () => {
-    const { controls, engine } = controlsOver();
-    controls.begin();
+    const { controls, engine, arm } = controlsOver();
+    arm();
     engine.durationMs = 30_000;
     engine.positionMs = 5_000;
     controls.seekBy(-SEEK_STEP_MS);
@@ -54,8 +69,8 @@ describe('VodPlayerControls', () => {
   });
 
   it('seeks freely while the duration is unknown and treats Infinity as unknown', () => {
-    const { controls, engine } = controlsOver();
-    controls.begin();
+    const { controls, engine, arm } = controlsOver();
+    arm();
     engine.durationMs = Number.POSITIVE_INFINITY;
     engine.positionMs = 1_000;
     controls.seekBy(SEEK_STEP_MS);

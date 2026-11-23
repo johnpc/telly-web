@@ -30,7 +30,7 @@ export { type CatchupEpg, createCatchupEpg } from './catchupEpg';
 export { type CatchupJump, CatchupNeighbours, LIVE_JUMP, liveEdgeRequest } from './catchupNeighbours';
 export { CatchupPause, keyHostOf, modeOf, routeCatchupKey } from './catchupControls';
 export { CatchupProgrammeHop } from './catchupProgrammeHop';
-export { PendingSeek, PositionStore } from './catchupPosition';
+export { PositionStore } from './catchupPosition';
 export { type CatchupPlaybackDeps, type CatchupEngine, type CatchupTuner } from './catchupDeps';
 export { CatchupPlayback } from './catchupPlayback';
 export { ArmedArchive, activeFor } from './catchupArmed';

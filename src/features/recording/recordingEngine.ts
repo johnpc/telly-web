@@ -3,7 +3,7 @@ import { runAttempts } from './captureAttempts';
 import { type Capture, countingSink, defaultFetch } from './captureContext';
 import type { RecordingFiles } from './recordingFiles';
 import type { RecordingStore } from './recordingStore';
-import { complete, fail, markStarted } from './recordingStoreTransitions';
+import { complete, fail, markStarted, markStopping } from './recordingStoreTransitions';
 import { type FetchLike, type StreamRecorder, recordStream } from './streamRecorder';
 
 export interface RecordingEngineDeps {
@@ -53,6 +53,7 @@ export class RecordingEngine {
   async stop(id: number): Promise<void> {
     const capture = this.active.get(id);
     if (capture === undefined) return;
+    await markStopping(this.deps.store, id);
     capture.stopped = true;
     capture.controller.abort();
     await capture.done;

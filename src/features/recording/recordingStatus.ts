@@ -3,13 +3,18 @@ import type { RecordingRow } from '@/core/db/types';
 /**
  * Lifecycle of a DVR entry, persisted by name in the `recordings` table
  * (Android `RecordingStatus`): SCHEDULED → RECORDING → DONE | FAILED, plus
- * SCHEDULED → FAILED for a missed window. Every edge is a guarded Dexie
- * update in `recordingStoreTransitions.ts` that reports whether it happened.
+ * SCHEDULED → FAILED for a missed window and, web-only, RECORDING → STOPPING
+ * → DONE for the user's Stop (the row itself says it is closing its file, so
+ * the library needs no optimistic copy). Every edge is a guarded Dexie update
+ * in `recordingStoreTransitions.ts` that reports whether it happened.
  */
 // @stateMachine('Recording row')
-export type RecordingStatus = 'SCHEDULED' | 'RECORDING' | 'DONE' | 'FAILED';
+export type RecordingStatus = 'SCHEDULED' | 'RECORDING' | 'STOPPING' | 'DONE' | 'FAILED';
 
-const STATUSES: readonly RecordingStatus[] = ['SCHEDULED', 'RECORDING', 'DONE', 'FAILED'];
+const STATUSES: readonly RecordingStatus[] = ['SCHEDULED', 'RECORDING', 'STOPPING', 'DONE', 'FAILED'];
+
+/** RECORDING or STOPPING: a capture is (still) writing this row's file. */
+export const LIVE_STATUSES: readonly RecordingStatus[] = ['RECORDING', 'STOPPING'];
 
 /** Unknown raw values read back as FAILED, never crash the library. */
 export function statusOf(raw: string): RecordingStatus {

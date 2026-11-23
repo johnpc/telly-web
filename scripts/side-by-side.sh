@@ -43,7 +43,9 @@ A=/opt/homebrew/share/android-commandlinetools
 export PATH=$A/platform-tools:$A/emulator:$HOME/actions-toolcache/node/22.23.4/arm64/bin:$PATH
 export JAVA_HOME=$(/usr/libexec/java_home -v 17) ANDROID_HOME=$A
 cd ~/repo/telly
-if pgrep -fl Runner.Worker >/dev/null; then echo "CI job running on the mini — refusing to boot the emulator" >&2; exit 2; fi
+# Another repo's CI job may own the mini: wait for it (up to 20 min) rather than fight over the emulator.
+for _ in $(seq 1 80); do pgrep -fl Runner.Worker >/dev/null || break; sleep 15; done
+if pgrep -fl Runner.Worker >/dev/null; then echo "CI job still running on the mini after 20 min — giving up" >&2; exit 2; fi
 trap 'bash scripts/emulator.sh stop >/dev/null 2>&1 || true' EXIT
 bash scripts/emulator.sh stop >/dev/null 2>&1 || true
 bash scripts/emulator.sh start telly-tv36

@@ -9,8 +9,13 @@ describe('onVodPlaybackKey', () => {
     const engine = fakeVodEngine();
     engine.durationMs = 600_000;
     const transport = new VodTransportVisibility(() => 5_000);
-    const controls = new VodPlayerControls(engine, transport, () => undefined);
-    controls.begin();
+    const controls = new VodPlayerControls(
+      engine,
+      transport,
+      () => undefined,
+      () => true,
+    );
+    controls.reveal();
     expect(onVodPlaybackKey('RIGHT', controls)).toBe(true);
     expect(engine.positionMs).toBe(SEEK_STEP_MS);
     expect(onVodPlaybackKey('FAST_FORWARD', controls)).toBe(true);
@@ -34,6 +39,7 @@ describe('onVodPlaybackKey', () => {
       fakeVodEngine(),
       new VodTransportVisibility(() => 1),
       () => undefined,
+      () => true,
     );
     expect(onVodPlaybackKey('BACK', controls)).toBe(false);
     expect(onVodPlaybackKey('MENU', controls)).toBe(false);

@@ -33,15 +33,20 @@ describe('VodTransportVisibility', () => {
     expect(transport.visible).toBe(false);
   });
 
-  it('dispose cancels a pending hide and repeated same-state writes do not notify', () => {
+  it('dispose cancels the armed hide and hides; repeated same-state pokes do not notify', () => {
     const transport = new VodTransportVisibility(() => 1_000);
     let notified = 0;
     transport.subscribe(() => (notified += 1));
     transport.poke(false);
     transport.poke(false);
-    transport.dispose();
-    vi.advanceTimersByTime(5_000);
-    expect(transport.visible).toBe(true);
+    expect(transport.state.kind).toBe('Shown');
     expect(notified).toBe(1);
+    transport.dispose();
+    expect(transport.state).toEqual({ kind: 'Hidden' });
+    vi.advanceTimersByTime(5_000);
+    expect(notified).toBe(2);
+    transport.poke(true);
+    expect(transport.state).toEqual({ kind: 'Shown', hide: null });
+    transport.dispose();
   });
 });

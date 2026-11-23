@@ -1,7 +1,7 @@
 import type { PlayerEngine } from '@/core/player';
-import { Observable } from '@/features/guide/observable';
+import { Observable } from '@/core/state/observable';
 import { NO_PROGRESS, sameProgress, type VodProgress } from './vodStage';
-import type { VodTransportVisibility } from './vodTransportVisibility';
+import { VodTransportVisibility } from './vodTransportVisibility';
 
 /** LEFT/RIGHT seek step. */
 export const SEEK_STEP_MS = 10_000;
@@ -10,58 +10,55 @@ export const JUMP_STEP_MS = 30_000;
 
 /**
  * The transport's player-facing half (Android `VodPlayerControls`):
- * pause/seek/clock sampling over the engine. Inert until `begin` — the
- * resume prompt's keys must never reach the player.
+ * pause/seek/clock sampling over the engine. Inert unless `active` (the
+ * ViewModel's `VodStage` is Playing) — the resume prompt's keys must never
+ * reach the player. Pause is the ENGINE's own flag, never a copy.
  */
 export class VodPlayerControls extends Observable {
-  private active = false;
-  private pausedFlag = false;
   private sampled: VodProgress = NO_PROGRESS;
 
   constructor(
     private readonly engine: PlayerEngine,
     readonly transport: VodTransportVisibility,
     private readonly persistOnPause: () => void,
+    private readonly active: () => boolean,
   ) {
     super();
   }
 
   get paused(): boolean {
-    return this.pausedFlag;
+    return this.engine.paused;
   }
 
   get progress(): VodProgress {
     return this.sampled;
   }
 
-  /** Arms the controls once playback starts and reveals the transport. */
-  begin(): void {
-    this.active = true;
-    this.pausedFlag = false;
+  /** Playback (re)started: reveal the transport. */
+  reveal(): void {
     this.transport.poke(false);
     this.notify();
   }
 
   togglePause(): void {
-    if (!this.active) return;
-    this.pausedFlag = !this.pausedFlag;
-    if (this.pausedFlag) {
+    if (!this.active()) return;
+    if (this.engine.paused) {
+      this.engine.play();
+    } else {
       this.engine.pause();
       this.persistOnPause();
-    } else {
-      this.engine.play();
     }
-    this.transport.poke(this.pausedFlag);
+    this.transport.poke(this.engine.paused);
     this.notify();
   }
 
   seekBy(deltaMs: number): void {
-    if (!this.active) return;
+    if (!this.active()) return;
     const duration = this.durationMs();
     const target = Math.max(0, this.engine.positionMs + deltaMs);
     this.engine.seekTo(duration > 0 ? Math.min(target, duration) : target);
     this.sample();
-    this.transport.poke(this.pausedFlag);
+    this.transport.poke(this.engine.paused);
   }
 
   sample(): void {
@@ -80,4 +77,25 @@ export class VodPlayerControls extends Observable {
     const duration = this.engine.durationMs;
     return Number.isFinite(duration) ? Math.max(0, duration) : 0;
   }
+}
+
+export interface VodControlsHooks {
+  persistOnPause: () => void;
+  /** True while the ViewModel's `VodStage` is Playing. */
+  active: () => boolean;
+  /** Forwarded on every controls / transport change. */
+  changed: () => void;
+}
+
+/** Controls over a fresh transport, both forwarding their changes to the owner. */
+export function createVodControls(
+  engine: PlayerEngine,
+  hideAfterMs: () => number,
+  hooks: VodControlsHooks,
+): VodPlayerControls {
+  const transport = new VodTransportVisibility(hideAfterMs);
+  const controls = new VodPlayerControls(engine, transport, hooks.persistOnPause, hooks.active);
+  controls.subscribe(hooks.changed);
+  transport.subscribe(hooks.changed);
+  return controls;
 }

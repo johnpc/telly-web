@@ -125,8 +125,8 @@ describe('RecordingRepository', () => {
     expect(await repo.countPlanned('k', 30)).toBe(0);
     expect(await repo.markStarted(b, 'RECORDING', 11)).toBe(1);
     expect(await repo.markStarted(b, 'RECORDING', 12)).toBe(0);
-    expect(await repo.finish(b, 'SCHEDULED', 'DONE', 50, 1)).toBe(0);
-    expect(await repo.finish(b, 'RECORDING', 'DONE', 50, 1)).toBe(1);
+    expect(await repo.finish(b, ['SCHEDULED'], 'DONE', 50, 1)).toBe(0);
+    expect(await repo.finish(b, ['RECORDING', 'STOPPING'], 'DONE', 50, 1)).toBe(1);
     expect(await repo.byId(b)).toMatchObject({ status: 'DONE', endMs: 50, sizeBytes: 1, startMs: 11 });
     await repo.remove(c);
     expect(await repo.byId(c)).toBeNull();

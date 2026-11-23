@@ -10,6 +10,7 @@ import { CatchupSession } from './catchupSession';
 import { DEFAULT_SEEK_KEYS } from './catchupKeyPolicy';
 import { DEFAULT_SKIP } from './skipSteps';
 import { HOUR, NOW, channelRow, programRow, request } from './testFixtures';
+import { NO_SEEK } from './catchupSession';
 
 class FakeEngine {
   positionMs = 0;
@@ -74,7 +75,7 @@ const yesterday = request(channel, NOW - 2 * HOUR, NOW - HOUR, 'C');
 
 describe('activeFor / ArmedArchive', () => {
   it('is on exactly while the tuner plays the armed archive url', () => {
-    const state = { request: yesterday, fromLive: false };
+    const state = { request: yesterday, fromLive: false, seek: NO_SEEK };
     expect(activeFor(null, state)).toBeNull();
     expect(activeFor({ kind: 'Live', channel }, state)).toBeNull();
     expect(activeFor({ kind: 'Archive', channel, url: 'other' }, state)).toBeNull();
@@ -96,7 +97,7 @@ describe('CatchupPlayback', () => {
     expect(catchup.resumePending()).toBe(true);
     expect(tuner.playing).toEqual({ kind: 'Archive', channel, url: yesterday.url });
     expect(engine.load).toHaveBeenLastCalledWith(yesterday.url, { live: false });
-    expect(catchup.state).toEqual({ request: yesterday, fromLive: false });
+    expect(catchup.state).toEqual({ request: yesterday, fromLive: false, seek: NO_SEEK });
     expect(seams.showTransport).toHaveBeenCalledTimes(1);
     expect(catchup.skip()).toBe(DEFAULT_SKIP);
   });

@@ -13,10 +13,21 @@ export function durationOf(request: Pick<CatchupRequest, 'startMs' | 'endMs'>): 
   return request.endMs - request.startMs;
 }
 
-/** The catch-up programme the player is on, and how it was entered. */
+/**
+ * Web deviation inside the `Catch-up mode` row: a seek issued before the
+ * archive's media is attached is lost (the `<video>` has no pipeline yet and
+ * the engine starts at 0), so it is latched IN the mode and replayed once the
+ * engine reports Playing; leaving the mode drops it by construction.
+ */
+export type CatchupSeek = { kind: 'None' } | { kind: 'Pending'; positionMs: number };
+
+export const NO_SEEK: CatchupSeek = { kind: 'None' };
+
+/** The catch-up programme the player is on, how it was entered, and a seek awaiting the media. */
 export interface CatchupState {
   request: CatchupRequest;
   fromLive: boolean;
+  seek: CatchupSeek;
 }
 
 /**

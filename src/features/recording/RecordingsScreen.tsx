@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from 'react';
+import { useState, type JSX } from 'react';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { useFocusedId } from '@/core/focus/useFocusedId';
 import { useKeyHandler } from '@/core/input/useKeyHandler';
@@ -74,7 +74,6 @@ export function RecordingsScreen(): JSX.Element {
   const [library] = useState(() => new RecordingsLibrary(recordingCenter));
   useObservableVersion(library);
   const rows = useRecordings();
-  useEffect(() => library.retainStopped(rows ?? []), [library, rows]);
   useLongOkDelete(library, rows ?? []);
   return (
     <FocusScope id="recordings" autoFocus="first" onBack={() => navigator.pop()}>

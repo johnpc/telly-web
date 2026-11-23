@@ -46,7 +46,7 @@ export interface RecordingRow {
   startMs: number;
   plannedEndMs: number;
   endMs: number | null;
-  /** A `RecordingStatus` name: SCHEDULED · RECORDING · DONE · FAILED. */
+  /** A `RecordingStatus` name: SCHEDULED · RECORDING · STOPPING · DONE · FAILED. */
   status: string;
   sizeBytes: number;
 }

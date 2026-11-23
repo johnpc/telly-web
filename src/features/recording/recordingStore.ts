@@ -1,6 +1,7 @@
 import { RecordingRepository, type RecordingImport } from '@/core/db/recordingRepository';
 import { type TellyDb, tellyDb } from '@/core/db/tellyDb';
 import type { RecordingRow } from '@/core/db/types';
+import { LIVE_STATUSES, statusOf } from './recordingStatus';
 
 /**
  * Dexie-backed state of the DVR (Android `RecordingStore`): inserts entries
@@ -46,17 +47,17 @@ export class RecordingStore {
     return this.repository.byId(id);
   }
 
-  /** Every entry currently claiming to record (recovery sweep input). */
+  /** Every entry currently claiming to write its file (recovery sweep input). */
   allRecording(): Promise<RecordingRow[]> {
-    return this.repository.byStatus('RECORDING');
+    return this.repository.byStatus(...LIVE_STATUSES);
   }
 
-  /** Live size while the capture grows; a no-op once the row left RECORDING. */
+  /** Live size while the capture grows; a no-op once the row is finalized. */
   updateSize(id: number, sizeBytes: number): Promise<number> {
     return this.db.recordings
       .where('id')
       .equals(id)
-      .and((row) => row.status === 'RECORDING')
+      .and((row) => LIVE_STATUSES.includes(statusOf(row.status)))
       .modify({ sizeBytes });
   }
 

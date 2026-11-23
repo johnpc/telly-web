@@ -28,8 +28,13 @@ export class RecordingRepository {
     return (await this.db.recordings.get(id)) ?? null;
   }
 
-  async byStatus(status: string): Promise<RecordingRow[]> {
-    return (await this.db.recordings.where('status').equals(status).toArray()).sort((a, b) => a.id - b.id);
+  async byStatus(...statuses: readonly string[]): Promise<RecordingRow[]> {
+    return (
+      await this.db.recordings
+        .where('status')
+        .anyOf([...statuses])
+        .toArray()
+    ).sort((a, b) => a.id - b.id);
   }
 
   async countPlanned(channelKey: string, startMs: number): Promise<number> {
@@ -40,13 +45,28 @@ export class RecordingRepository {
     return rows.filter((row) => PLANNED.has(row.status)).length;
   }
 
-  /** `from` -> `status` with the end stamp and size; 0 rows when the row was not in `from`. */
-  finish(id: number, from: string, status: string, endMs: number, sizeBytes: number): Promise<number> {
+  /** one of `from` -> `status` with the end stamp and size; 0 rows when the row was not in `from`. */
+  finish(
+    id: number,
+    from: readonly string[],
+    status: string,
+    endMs: number,
+    sizeBytes: number,
+  ): Promise<number> {
+    return this.db.recordings
+      .where('id')
+      .equals(id)
+      .and((row) => from.includes(row.status))
+      .modify({ status, endMs, sizeBytes });
+  }
+
+  /** `from` -> `status` with nothing else touched; 0 rows when the row was not in `from`. */
+  transition(id: number, from: string, status: string): Promise<number> {
     return this.db.recordings
       .where('id')
       .equals(id)
       .and((row) => row.status === from)
-      .modify({ status, endMs, sizeBytes });
+      .modify({ status });
   }
 
   /** SCHEDULED -> `status`; 0 rows when cancelled/deleted/already started. */

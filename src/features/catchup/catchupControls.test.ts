@@ -4,6 +4,7 @@ import { CatchupPause, type CatchupKeyHost, modeOf, routeCatchupKey } from './ca
 import { DEFAULT_SEEK_KEYS } from './catchupKeyPolicy';
 import { DEFAULT_SKIP } from './skipSteps';
 import { HOUR, NOW, channelRow, request } from './testFixtures';
+import { NO_SEEK } from './catchupSession';
 
 const NONE: PlaybackOverlay = { kind: 'None' };
 
@@ -64,9 +65,9 @@ describe('routeCatchupKey', () => {
 describe('modeOf', () => {
   it('is Playing with a state, LiveCapable on a catch-up channel, else None', () => {
     const channel = channelRow(1);
-    expect(modeOf({ request: request(channel, NOW - 2 * HOUR, NOW - HOUR), fromLive: false }, null)).toBe(
-      'Playing',
-    );
+    expect(
+      modeOf({ request: request(channel, NOW - 2 * HOUR, NOW - HOUR), fromLive: false, seek: NO_SEEK }, null),
+    ).toBe('Playing');
     expect(modeOf(null, channel)).toBe('LiveCapable');
     expect(modeOf(null, channelRow(2, { catchupType: null, catchupSource: null }))).toBe('None');
     expect(modeOf(null, null)).toBe('None');
