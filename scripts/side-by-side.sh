@@ -31,7 +31,8 @@ find "$OUT/web-results" -name '*.webm' -exec cp {} "$OUT/web/" \;
 step "android: sync tree + run @$AREA on the mini with screenrecord"
 rsync -az --delete --exclude build --exclude .gradle --exclude '*/build' --exclude .git \
   --exclude docs/reference "$ANDROID_REPO/" "$MINI:~/repo/telly/"
-ssh "$MINI" 'bash -s' "$AREA" <<'REMOTE'
+# The remote script travels as a FILE: fed over stdin, Gradle/adb would swallow the rest of it.
+cat > "$OUT/remote.sh" <<'REMOTE'
 set -uo pipefail
 AREA="$1"
 A=/opt/homebrew/share/android-commandlinetools
@@ -39,18 +40,20 @@ export PATH=$A/platform-tools:$A/emulator:$HOME/actions-toolcache/node/22.23.4/a
 export JAVA_HOME=$(/usr/libexec/java_home -v 17) ANDROID_HOME=$A
 cd ~/repo/telly
 if pgrep -fl Runner.Worker >/dev/null; then echo "CI job running on the mini — refusing to boot the emulator" >&2; exit 2; fi
+trap 'bash scripts/emulator.sh stop >/dev/null 2>&1 || true' EXIT
 bash scripts/emulator.sh stop >/dev/null 2>&1 || true
 bash scripts/emulator.sh start telly-tv36
 rm -rf /tmp/sbs && mkdir -p /tmp/sbs
 # screenrecord caps each file at 3 min: chain clips until the leg finishes.
 ( i=0; while [ ! -f /tmp/sbs/done ]; do adb shell screenrecord --size 1280x720 --time-limit 180 /sdcard/sbs-$i.mp4; i=$((i+1)); done ) &
 REC=$!
-bash scripts/ci-acceptance.sh "$AREA" || echo "(android scenarios failed — recording kept)"
+bash scripts/ci-acceptance.sh "$AREA" </dev/null || echo "(android scenarios failed — recording kept)"
 touch /tmp/sbs/done; sleep 1; adb shell pkill -INT screenrecord || true; wait $REC || true; sleep 2
 for f in $(adb shell ls /sdcard/sbs-*.mp4 | tr -d '\r'); do adb pull "$f" /tmp/sbs/ >/dev/null; adb shell rm "$f"; done
-bash scripts/emulator.sh stop >/dev/null 2>&1 || true
 ls /tmp/sbs
 REMOTE
+scp -q "$OUT/remote.sh" "$MINI:/tmp/sbs-remote.sh"
+ssh "$MINI" "bash /tmp/sbs-remote.sh '$AREA'" </dev/null
 scp -q "$MINI:/tmp/sbs/*.mp4" "$OUT/android/" || true
 
 step "stack with ffmpeg"
@@ -61,8 +64,9 @@ for f in $(ls "$OUT"/android/*.mp4 | sort -V); do echo "file '$(pwd)/$f'"; done 
 ffmpeg -y -loglevel error -f concat -safe 0 -i "$OUT/web.txt" -c copy "$OUT/web.webm" 2>/dev/null || \
   ffmpeg -y -loglevel error -f concat -safe 0 -i "$OUT/web.txt" "$OUT/web.webm"
 ffmpeg -y -loglevel error -f concat -safe 0 -i "$OUT/android.txt" -c copy "$OUT/android.mp4"
+# Web on the LEFT, Android on the RIGHT (no text labels: this ffmpeg has no drawtext filter).
 ffmpeg -y -loglevel error -i "$OUT/web.webm" -i "$OUT/android.mp4" -filter_complex \
-  "[0:v]scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2,drawtext=text='telly-web':x=16:y=16:fontsize=28:fontcolor=white:box=1:boxcolor=black@0.5[l];\
-   [1:v]scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2,drawtext=text='telly (Android TV)':x=16:y=16:fontsize=28:fontcolor=white:box=1:boxcolor=black@0.5[r];\
+  "[0:v]scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2,setsar=1[l];\
+   [1:v]scale=960:540:force_original_aspect_ratio=decrease,pad=960:540:(ow-iw)/2:(oh-ih)/2,setsar=1[r];\
    [l][r]hstack=inputs=2[v]" -map "[v]" -r 30 -pix_fmt yuv420p "artifacts/side-by-side-$AREA.mp4"
 echo "wrote artifacts/side-by-side-$AREA.mp4"
