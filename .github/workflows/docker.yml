@@ -1,42 +1,50 @@
 name: Docker image
 
-# Publishes ghcr.io/johnpc/telly-web:latest (+ :sha-<short>) after a green CI
-# run on main; the umbrel stack pulls :latest.
+# Publishes mrorbitman/telly-web on Docker Hub (like the other johnpc repos):
+# :latest + :sha-<short> after every green CI run on main, and semver tags
+# (:1.2.3, :1.2, :1) on a v*.*.* tag. The umbrel stack pulls :latest.
 on:
   workflow_run:
     workflows: [CI]
     types: [completed]
     branches: [main]
+  push:
+    tags: ['v*.*.*']
   workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   image:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: mrorbitman/telly-web
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=raw,value=latest,enable=${{ github.event_name != 'push' }}
+            type=raw,value=sha-${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - id: meta
-        run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64
-          build-args: VITE_APP_VERSION=${{ steps.meta.outputs.short }}
-          tags: |
-            ghcr.io/johnpc/telly-web:latest
-            ghcr.io/johnpc/telly-web:sha-${{ steps.meta.outputs.short }}
+          platforms: linux/amd64,linux/arm64
+          build-args: VITE_APP_VERSION=${{ github.event.workflow_run.head_sha || github.sha }}
+          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

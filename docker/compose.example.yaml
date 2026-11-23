@@ -1,7 +1,7 @@
 # Self-host telly-web: `docker compose up -d` then open http://<host>:8002/.
 services:
   web:
-    image: ghcr.io/johnpc/telly-web:latest
+    image: mrorbitman/telly-web:latest
     container_name: telly-web
     restart: unless-stopped
     ports:
