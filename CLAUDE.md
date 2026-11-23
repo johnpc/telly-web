@@ -185,3 +185,14 @@ npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:80
   moved ≤ 2 ms, zero long tasks — nothing near the 300 ms bar, so no
   memoization pass was warranted; the grid already renders only the visible
   band + one overscan row.
+- **2026-11-22** Deployed. (1) GitHub Pages twin at `https://johnpc.github.io/telly-web/`
+  (`deploy.yml`, `VITE_BASE=/telly-web/`, needs `actions: read`). (2) Docker image
+  `mrorbitman/telly-web` on Docker Hub like the other johnpc repos (`docker.yml`:
+  `:latest` + `:sha-…` after every green CI run on `main`, semver on `v*.*.*` tags;
+  amd64 + arm64; nginx serving `dist/` with SPA fallback, `/healthz`, immutable
+  asset caching, `X-Robots-Tag: noindex`). (3) Self-hosted at `https://telly.jpc.io`:
+  umbrel stack `/home/umbrel/homelab/stacks/telly-web` on LAN `:8002`, exposed the
+  Jellyfin way — DNS-only CNAME → `jellyfin.jpc.io` → router → umbrel-7 Nginx Proxy
+  Manager host (own Let's Encrypt cert), never the Cloudflare proxy (media
+  streaming ToS); Homepage lists it first under Favorites. The container has no auth
+  and no data: everything the user enters lives in their browser.
