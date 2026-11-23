@@ -318,6 +318,16 @@ Then(/^I see a blue programme section with (.+)$/, async ({ world }, rawList: st
   for (const name of quotedNames(rawList)) await expect(sheet.getByText(name, { exact: true })).toBeVisible();
 });
 
+Then(
+  /^I see a blue channel section "([^"]+)" with (.+)$/,
+  async ({ world }, channel: string, rawList: string) => {
+    const sheet = world.page.getByTestId('channel-menu');
+    await expect(sheet.getByText(channel, { exact: true }).first()).toBeVisible();
+    for (const name of quotedNames(rawList))
+      await expect(sheet.getByText(name, { exact: true })).toBeVisible();
+  },
+);
+
 Then(/^I see a blue "([^"]+)" section with (.+)$/, async ({ world }, header: string, rawList: string) => {
   const sheet = world.page.getByTestId('channel-menu');
   await expect(sheet.getByText(header, { exact: true }).first()).toBeVisible();

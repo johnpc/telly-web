@@ -3,7 +3,7 @@ import type { ChannelRow, PlaylistRow, ReminderRow } from '@/core/db/types';
 import { channelImport } from '@/test/dbFixtures';
 import { paneTitle } from './paneTitle';
 import { groupsOf, toPlaylistItems } from './playlistItems';
-import { formatClock, toReminderItems } from './reminderItems';
+import { toReminderItems } from './reminderItems';
 import { EMPTY_FEEDS } from './settingsFeeds';
 
 const row = (
@@ -72,11 +72,12 @@ describe('settings feed items', () => {
       { id: 10, channelId: 77, title: 'Gone', startMs: Date.UTC(2026, 0, 1, 8, 0), stopMs: 0, firedAtMs: 0 },
     ];
     expect(toReminderItems(reminders, channels, true, 'UTC')).toEqual([
-      { id: 9, title: 'Show', channelName: 'Custom One', airTime: '08:05 PM' },
-      { id: 10, title: 'Gone', channelName: '', airTime: '08:00 AM' },
+      { id: 9, title: 'Show', channelName: 'Custom One', airTime: 'Thu, Jan 1, 8:05 PM' },
+      { id: 10, title: 'Gone', channelName: '', airTime: 'Thu, Jan 1, 8:00 AM' },
     ]);
-    expect(formatClock(Date.UTC(2026, 0, 1, 20, 5), false, 'UTC')).toBe('20:05');
-    expect(formatClock(0, true)).toMatch(/\d\d:\d\d/);
+    expect(toReminderItems(reminders.slice(0, 1), channels, false, 'UTC')[0]?.airTime).toBe(
+      'Thu, Jan 1, 20:05',
+    );
   });
 
   it('titles every pane', () => {

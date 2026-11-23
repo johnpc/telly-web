@@ -114,6 +114,9 @@ async function focusRow(page: Page, name: string): Promise<void> {
 // panel is already up.
 When('I open the channel panel', async ({ world }) => {
   const { page } = world;
+  // A PIN prompt that just committed re-shows the panel in the same commit it closes; wait for
+  // it to settle before deciding whether the panel is already up (Android's step is idempotent).
+  await expect(page.getByTestId('pin-prompt')).toHaveCount(0);
   if (await panel(page).isVisible()) return;
   await expect(page.getByTestId('app-root')).toHaveAttribute('data-route', 'Playback');
   await world.press('Enter');

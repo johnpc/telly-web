@@ -1,12 +1,6 @@
 import { type ChannelRow, displayName, type ReminderRow } from '@/core/db/types';
+import { clockText } from '@/core/time/programTimes';
 import type { ReminderListItem } from './settingsFeeds';
-
-/** "03:45 PM" / "15:45" per the clock-format setting (Android `ProgramTimes.clock`). */
-export function formatClock(ms: number, twelveHour: boolean, timeZone?: string): string {
-  const options: Intl.DateTimeFormatOptions = { hour: '2-digit', minute: '2-digit', hour12: twelveHour };
-  if (timeZone !== undefined) options.timeZone = timeZone;
-  return new Intl.DateTimeFormat('en-US', options).format(new Date(ms));
-}
 
 /** Scheduled reminders joined with their channel names + a clock stamp, in air order. */
 export function toReminderItems(
@@ -21,7 +15,11 @@ export function toReminderItems(
       id: reminder.id,
       title: reminder.title,
       channelName: channel === undefined ? '' : displayName(channel),
-      airTime: formatClock(reminder.startMs, twelveHour, timeZone),
+      // Android `ProgramTimes.clock`: "Sun, Sep 13, 2:45 PM" / "Sun, Sep 13, 14:45".
+      airTime:
+        timeZone === undefined
+          ? clockText(reminder.startMs, { is24h: !twelveHour })
+          : clockText(reminder.startMs, { is24h: !twelveHour, timeZone }),
     };
   });
 }
