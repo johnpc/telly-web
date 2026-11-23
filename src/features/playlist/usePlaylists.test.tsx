@@ -31,7 +31,7 @@ describe('playlist hooks', () => {
     await waitFor(() => expect(result.current?.map((p) => p.name)).toEqual(['P']));
   });
 
-  it('usePlaylistRefresh fetches through the CORS proxy setting and imports', async () => {
+  it('usePlaylistRefresh fetches the playlist (direct first, proxy fallback) and imports', async () => {
     const settings = new SettingsRepository(new MemoryKeyValueStore());
     settings.set(TellySettings.CORS_PROXY, 'https://cors/');
     const seen: string[] = [];
@@ -43,6 +43,8 @@ describe('playlist hooks', () => {
     );
     vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
       seen.push(String(input));
+      // The direct request is CORS-blocked (a network error); the proxy answers.
+      if (!String(input).startsWith('https://cors/')) throw new TypeError('Failed to fetch');
       return new Response('#EXTM3U\n#EXTINF:-1,A\nhttp://s/a.ts\n');
     });
     const { result } = renderHook(
@@ -55,7 +57,7 @@ describe('playlist hooks', () => {
     await waitFor(() =>
       expect(result.current.data).toEqual({ playlistId: 1, channels: 1, vodItems: 0, epgUrl: null }),
     );
-    expect(seen).toEqual(['https://cors/http%3A%2F%2Fp%2Fl.m3u']);
+    expect(seen).toEqual(['http://p/l.m3u', 'https://cors/http%3A%2F%2Fp%2Fl.m3u']);
     vi.unstubAllGlobals();
     expect(await playlists.byUrl('http://p/l.m3u')).toMatchObject({ name: 'Mine', lastUpdatedMs: 7 });
   });

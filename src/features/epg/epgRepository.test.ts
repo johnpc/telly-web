@@ -57,8 +57,11 @@ describe('refreshEpgSource', () => {
     expect(toProgramImports(doc, false)[0]).toMatchObject({ description: null });
   });
 
-  it('defaultEpgSourceDeps fetches through the proxy with the global fetch', async () => {
-    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => new Response(String(input)));
+  it('defaultEpgSourceDeps fetches directly, falling back to the proxy when the direct fetch is blocked', async () => {
+    vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
+      if (String(input) === 'http://e/x.xml') throw new TypeError('Failed to fetch');
+      return new Response(String(input));
+    });
     const bytes = await defaultEpgSourceDeps('https://cors/').fetchBytes('http://e/x.xml');
     expect(new TextDecoder().decode(bytes)).toBe('https://cors/http%3A%2F%2Fe%2Fx.xml');
     expect(defaultEpgSourceDeps('').storeDescriptions()).toBe(true);
