@@ -35,7 +35,13 @@ export function SearchOverlayScreen({
   if (overlay.kind === 'ProgramMenu')
     return <SearchDropdownScreen hit={overlay.hit} overlays={overlays} close={close} />;
   if (overlay.kind === 'CustomRecording')
-    return <CustomRecordingFormScreen menu={searchRecordingFor(overlays).menu} onBack={close} />;
+    return (
+      <CustomRecordingFormScreen
+        form={overlay.form}
+        menu={searchRecordingFor(overlays).menu}
+        onBack={close}
+      />
+    );
   if (overlay.kind === 'ComingSoon') {
     return (
       <FocusScope id="search-coming-soon" trap onBack={close}>

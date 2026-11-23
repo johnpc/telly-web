@@ -1,10 +1,16 @@
 import type { ChannelRepository } from '@/core/db/channelRepository';
 import { type ChannelOverrides, type ChannelRow, displayName } from '@/core/db/types';
+import type { ChannelOptionsHost } from './channelOptionsHost';
 import { OPTION } from './channelOptionsRows';
 import { type ChannelOptionsPicker, decoderRawOf, externalEffective } from './channelOptionsValues';
-import { Observable } from '@/features/guide/observable';
 
-/** The pane's in-pane dialogs: the rename editor and the value pickers. */
+// @stateMachine('Channel-options dialog')
+/**
+ * The pane's in-pane dialogs: Closed (null) · Rename · Picker. The value is a
+ * FIELD of the host's `ChannelOptions` layer variant (`GuideLayer` /
+ * `PlaybackOverlay`), so the layer union is the one owner of "what is on top"
+ * and BACK, `menu.reset()` or any layer change drop the dialog with the pane.
+ */
 export type ChannelOptionsDialog =
   | { kind: 'Rename'; channelId: number; initial: string }
   | { kind: 'Picker'; channelId: number; picker: ChannelOptionsPicker };
@@ -31,22 +37,20 @@ function pickedOverride(picker: ChannelOptionsPicker, raw: string): Partial<Chan
 }
 
 /**
- * The Channel-options pane's state machine (Android `ChannelOptionsController`
- * + `ChannelOptionsStore`): opens/answers the rename and picker dialogs and
- * writes partial overrides, so consecutive edits never clobber each other.
+ * The Channel-options pane's transitions (Android `ChannelOptionsController`
+ * + `ChannelOptionsStore`): opens/answers the rename and picker dialogs on the
+ * host's layer and writes partial overrides, so consecutive edits never
+ * clobber each other. Holds no state of its own.
  */
-export class ChannelOptionsController extends Observable {
-  private open: ChannelOptionsDialog | null = null;
-
+export class ChannelOptionsController {
   constructor(
     private readonly channels: ChannelRepository,
     private readonly externalDefault: () => boolean,
-  ) {
-    super();
-  }
+    private readonly host: ChannelOptionsHost,
+  ) {}
 
   get dialog(): ChannelOptionsDialog | null {
-    return this.open;
+    return this.host.dialog();
   }
 
   /** A pane row activation; non-null = the host finishes the flow. */
@@ -63,24 +67,26 @@ export class ChannelOptionsController extends Observable {
 
   /** Commit of the rename dialog; blank restores the playlist name. */
   submitRename(text: string): void {
-    if (this.open?.kind !== 'Rename') return;
+    const open = this.dialog;
+    if (open?.kind !== 'Rename') return;
     const name = text.trim();
-    void this.channels.updateOverrides(this.open.channelId, { customName: name === '' ? null : name });
+    void this.channels.updateOverrides(open.channelId, { customName: name === '' ? null : name });
     this.show(null);
   }
 
   /** A picker row pick, dispatched by the open dialog's kind. */
   choose(raw: string): void {
-    if (this.open?.kind !== 'Picker') return;
-    const change = pickedOverride(this.open.picker, raw);
-    if (change !== null) void this.channels.updateOverrides(this.open.channelId, change);
+    const open = this.dialog;
+    if (open?.kind !== 'Picker') return;
+    const change = pickedOverride(open.picker, raw);
+    if (change !== null) void this.channels.updateOverrides(open.channelId, change);
     this.show(null);
   }
 
   /** BACK closes an open dialog first; false = nothing was open. */
   closeDialog(): boolean {
-    const wasOpen = this.open !== null;
-    this.show(null);
+    const wasOpen = this.dialog !== null;
+    if (wasOpen) this.show(null);
     return wasOpen;
   }
 
@@ -92,7 +98,6 @@ export class ChannelOptionsController extends Observable {
   }
 
   private show(dialog: ChannelOptionsDialog | null): void {
-    this.open = dialog;
-    this.notify();
+    this.host.showDialog(dialog);
   }
 }

@@ -53,7 +53,7 @@ function FormDialog({ form, menu }: { form: CustomRecordingForm; menu: Recording
           value={`${form.durationMinutes} min`}
           onAdjust={(steps) => form.adjustDuration(steps)}
         />
-        <ActionRow label="Create" onClick={() => menu.createFromForm()} />
+        <ActionRow label="Create" onClick={() => menu.createFromForm(form)} />
       </div>
     </div>
   );
@@ -66,21 +66,17 @@ function FormDialog({ form, menu }: { form: CustomRecordingForm; menu: Recording
  * schedules it. The guide, playback and search hosts all render this.
  */
 export function CustomRecordingFormScreen({
+  form,
   menu,
   onBack,
 }: {
+  /** The form the host's layer carries (BACK pops layer and form together). */
+  form: CustomRecordingForm;
   menu: RecordingMenu;
   onBack: () => void;
-}): JSX.Element | null {
-  useObservableVersion(menu);
-  const form = menu.form;
-  if (form === null) return null;
-  const dismiss = (): void => {
-    menu.dismissForm();
-    onBack();
-  };
+}): JSX.Element {
   return (
-    <FocusScope id="custom-recording" trap autoFocus="first" onBack={dismiss}>
+    <FocusScope id="custom-recording" trap autoFocus="first" onBack={onBack}>
       <FormDialog form={form} menu={menu} />
     </FocusScope>
   );

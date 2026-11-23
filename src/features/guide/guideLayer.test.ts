@@ -12,7 +12,7 @@ describe('backOf', () => {
       [{ kind: 'BlockPin', channelId: 1, mode: 'Enter PIN', back: ROW_MENU }, ROW_MENU],
       [{ kind: 'GroupTool', session }, ROW_MENU],
       [{ kind: 'GroupPin', group: 'Movies' }, GROUPS],
-      [{ kind: 'ChannelOptions', channelId: 1 }, GRID],
+      [{ kind: 'ChannelOptions', channelId: 1, dialog: null }, GRID],
       [ROW_MENU, GRID],
       [GROUPS, GRID],
     ];
@@ -31,6 +31,6 @@ describe('backOf', () => {
     });
     expect(isPushed(GRID)).toBe(false);
     expect(isPushed({ kind: 'CellMenu', cell: { startMs: 0, endMs: 1, program: null } })).toBe(false);
-    expect(isPushed({ kind: 'ChannelOptions', channelId: 1 })).toBe(true);
+    expect(isPushed({ kind: 'ChannelOptions', channelId: 1, dialog: null })).toBe(true);
   });
 });

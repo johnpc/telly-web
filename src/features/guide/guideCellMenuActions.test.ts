@@ -21,7 +21,6 @@ function make(withRow = true): CellActionDeps & { spies: Record<string, ReturnTy
       () => 7,
       () => rows,
     ),
-    closeOptionsDialog: () => false,
   });
   menu.openCellMenu(cell(ORIGIN, ORIGIN + 1));
   const spies = { playChannel: vi.fn(), toggleReminder: vi.fn(), toggleMyList: vi.fn() };

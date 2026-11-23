@@ -1,5 +1,11 @@
-import { type GroupToolHost, type SheetHost, openGroupTool } from '@/features/channelmenu';
-import { DISMISS } from '../overlay/playbackCommands';
+import {
+  type ChannelOptionsHost,
+  type GroupToolHost,
+  type SheetHost,
+  dialogHostOf,
+  openGroupTool,
+} from '@/features/channelmenu';
+import { DISMISS, type PlaybackCommands, show } from '../overlay/playbackCommands';
 import { afterAction, type PlaybackOverlay } from '../overlay/playbackOverlay';
 import type { PlaybackMenuHandler } from './playbackMenuHandler';
 
@@ -35,7 +41,12 @@ export function playbackSheetHost(menu: PlaybackMenuHandler): SheetHost {
     pushBlockPin: (channel, mode) => menu.show({ kind: 'BlockPin', channel, mode, back: menu.overlay }),
     pushDescription: (channel) => menu.show({ kind: 'Description', channel, back: menu.overlay }),
     showChannelOptions: (channel) =>
-      menu.show({ kind: 'ChannelOptions', channelId: channel.id, back: afterAction(menu.overlay) }),
+      menu.show({
+        kind: 'ChannelOptions',
+        channelId: channel.id,
+        dialog: null,
+        back: afterAction(menu.overlay),
+      }),
     openGroupTool: (item, channel) => {
       const input = { channel, group: menu.sheetGroup, groups: menu.customGroups };
       openGroupTool(toolHost(menu), deps.groupTools, item, input);
@@ -45,4 +56,12 @@ export function playbackSheetHost(menu: PlaybackMenuHandler): SheetHost {
     toggleMyList: deps.toggleMyList,
     openExternal: (channel) => deps.nav.openExternal(channel.streamUrl),
   };
+}
+
+/** The Channel-options pane's dialog lives on the `ChannelOptions` overlay; writes go through the one executor. */
+export function overlayDialogHost(commands: PlaybackCommands): ChannelOptionsHost {
+  return dialogHostOf(
+    () => commands.overlay,
+    (overlay) => commands.execute(show(overlay)),
+  );
 }

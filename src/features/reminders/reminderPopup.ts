@@ -12,18 +12,33 @@ export interface ReminderPopupData {
   startsAtLabel: string;
 }
 
+// @stateMachine('Reminder popup')
+/** Hidden · Shown(data, hide) — the auto-dismiss timer lives IN the state, so it cannot outlive the popup. */
+export type ReminderPopupState =
+  | { readonly kind: 'Hidden' }
+  | {
+      readonly kind: 'Shown';
+      readonly data: ReminderPopupData;
+      readonly hide: ReturnType<typeof setTimeout>;
+    };
+
+const HIDDEN: ReminderPopupState = { kind: 'Hidden' };
+
 /** The popup lingers ~30 s, then goes away on its own. */
 export const AUTO_DISMISS_MS = 30_000;
 
 export class ReminderPopupController {
-  private data: ReminderPopupData | null = null;
-  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private state: ReminderPopupState = HIDDEN;
   private readonly listeners = new Set<() => void>();
 
   constructor(private readonly autoDismissMs: number = AUTO_DISMISS_MS) {}
 
+  get current(): ReminderPopupState {
+    return this.state;
+  }
+
   get popup(): ReminderPopupData | null {
-    return this.data;
+    return this.snapshot();
   }
 
   readonly subscribe = (listener: () => void): (() => void) => {
@@ -31,33 +46,27 @@ export class ReminderPopupController {
     return () => this.listeners.delete(listener);
   };
 
-  readonly snapshot = (): ReminderPopupData | null => this.data;
+  readonly snapshot = (): ReminderPopupData | null => (this.state.kind === 'Shown' ? this.state.data : null);
 
-  /** Fired by the engine: shows the popup and arms the auto-dismiss. */
+  /** Fired by the engine: shows the popup and arms the auto-dismiss (re-arming replaces an earlier one). */
   show(reminder: ReminderRow, channelName: string): void {
-    this.set({
+    const data: ReminderPopupData = {
       reminderId: reminder.id,
       channelId: reminder.channelId,
       channelName,
       programmeTitle: reminder.title,
       startsAtLabel: `Starts at ${startTimeText(reminder.startMs)}`,
-    });
-    this.clearTimer();
-    this.hideTimer = setTimeout(() => this.dismiss(), this.autoDismissMs);
+    };
+    this.set({ kind: 'Shown', data, hide: setTimeout(() => this.dismiss(), this.autoDismissMs) });
   }
 
   dismiss(): void {
-    this.clearTimer();
-    if (this.data !== null) this.set(null);
+    if (this.state.kind === 'Shown') this.set(HIDDEN);
   }
 
-  private clearTimer(): void {
-    if (this.hideTimer !== null) clearTimeout(this.hideTimer);
-    this.hideTimer = null;
-  }
-
-  private set(data: ReminderPopupData | null): void {
-    this.data = data;
+  private set(next: ReminderPopupState): void {
+    if (this.state.kind === 'Shown') clearTimeout(this.state.hide);
+    this.state = next;
     this.listeners.forEach((listener) => listener());
   }
 }

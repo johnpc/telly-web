@@ -18,6 +18,7 @@ export function GuideLayersScreen({ controller }: { controller: GuideController 
       return (
         <ChannelOptionsScreen
           channelId={layer.channelId}
+          dialog={layer.dialog}
           options={controller.parts.options}
           channels={controller.deps.channels}
           onRow={controller.parts.onChannelOption}

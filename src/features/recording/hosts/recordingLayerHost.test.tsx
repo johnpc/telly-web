@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { RemoteKeysProvider } from '@/core/input/RemoteKeysProvider';
 import { RecordingMenu } from '../recordingMenu';
 import { recordingLayer } from './recordingLayerHost';
+import { CustomRecordingForm } from '../customRecordingForm';
+import { fakeChannel } from '../recordingTestSupport';
 
 const menu = new RecordingMenu({
   center: { toggleInstant: vi.fn(), scheduleProgramme: vi.fn(), stop: vi.fn() },
@@ -31,8 +33,9 @@ describe('recordingLayer', () => {
     expect(screen.getByText(/The recording of "News One"/)).toBeInTheDocument();
   });
 
-  it('renders nothing for the form layer while no form is primed', () => {
-    render(keyed(recordingLayer({ kind: 'CustomRecording' }, { menu, confirmStop: vi.fn() }, vi.fn())));
-    expect(screen.queryByTestId('custom-recording-form')).toBeNull();
+  it('renders the form the layer carries', () => {
+    const form = new CustomRecordingForm(fakeChannel(), 1_000_000);
+    render(keyed(recordingLayer({ kind: 'CustomRecording', form }, { menu, confirmStop: vi.fn() }, vi.fn())));
+    expect(screen.getByTestId('custom-recording-form')).toBeInTheDocument();
   });
 });

@@ -3,6 +3,7 @@ import type { PlaybackOverlay } from '@/features/playback/overlay/playbackOverla
 import type { RecordingCenter } from '../recordingCenter';
 import { fakeChannel } from '../recordingTestSupport';
 import { createPlaybackRecording, doneTarget, overlayFor } from './playbackRecording';
+import { CustomRecordingForm } from '../customRecordingForm';
 
 const NONE: PlaybackOverlay = { kind: 'None' };
 const PANEL: PlaybackOverlay = { kind: 'Panel' };
@@ -27,7 +28,12 @@ describe('playback recording prompts', () => {
       channelName: 'News One',
       back: NONE,
     });
-    expect(overlayFor({ kind: 'CustomForm' }, SHEET)).toEqual({ kind: 'CustomRecording', back: SHEET });
+    const form = new CustomRecordingForm(fakeChannel(), 1_000_000);
+    expect(overlayFor({ kind: 'CustomForm', form }, SHEET)).toEqual({
+      kind: 'CustomRecording',
+      form,
+      back: SHEET,
+    });
   });
 });
 
@@ -64,8 +70,10 @@ describe('createPlaybackRecording', () => {
     await vi.waitFor(() => expect(shown).toEqual([PANEL, PANEL]));
     expect(center.toggleInstant.mock.calls.map(([channel]) => channel.name)).toEqual(['Sports', 'News One']);
     record.onCustomRecording(fakeChannel());
-    expect(shown[2]).toEqual({ kind: 'CustomRecording', back: SHEET });
-    expect(record.menu.form?.channel.name).toBe('News One');
+    expect(shown[2]).toMatchObject({ kind: 'CustomRecording', back: SHEET });
+    const pushed = shown[2];
+    if (pushed?.kind !== 'CustomRecording') throw new Error('form not shown');
+    expect(pushed.form.channel.name).toBe('News One');
     record.confirmStop(9);
     await vi.waitFor(() => expect(center.stop).toHaveBeenCalledWith(9));
   });

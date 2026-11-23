@@ -65,8 +65,9 @@ describe('guideControllerParts: sheet rows', () => {
     expect(h.controller.layer.kind).toBe('GroupTool');
     h.controller.menu.show(ROW_MENU);
     parts.onSheetItem('Custom recording');
-    expect(h.controller.layer).toMatchObject({ kind: 'CustomRecording', back: ROW_MENU });
-    expect(parts.recording.menu.form?.channel.id).toBe(h.rows[0]?.channel.id);
+    const layer = h.controller.layer;
+    expect(layer).toMatchObject({ kind: 'CustomRecording', back: ROW_MENU });
+    if (layer.kind === 'CustomRecording') expect(layer.form.channel.id).toBe(h.rows[0]?.channel.id);
     h.controller.engine.reset();
     parts.onSheetItem('Search');
     expect(h.opened).toEqual([]);
@@ -101,11 +102,11 @@ describe('guideControllerParts: channel options, cell menu, PIN', () => {
     parts.onSheetItem('Channel options');
     parts.onChannelOption(first, OPTION.BLOCK);
     expect(h.controller.layer).toMatchObject({ kind: 'BlockPin', back: { kind: 'ChannelOptions' } });
-    h.controller.menu.show({ kind: 'ChannelOptions', channelId: second.id });
+    h.controller.menu.show({ kind: 'ChannelOptions', channelId: second.id, dialog: null });
     parts.onChannelOption(second, OPTION.NAMES_EDITOR);
     expect(h.controller.layer).toEqual(GRID);
     expect(h.opened).toEqual([{ kind: 'ChannelNamesEditor' }]);
-    h.controller.menu.show({ kind: 'ChannelOptions', channelId: second.id });
+    h.controller.menu.show({ kind: 'ChannelOptions', channelId: second.id, dialog: null });
     parts.onChannelOption(second, OPTION.HIDE);
     expect(h.controller.layer).toEqual(GRID);
     expect((await h.channels.byId(second.id))?.hidden).toBe(true);

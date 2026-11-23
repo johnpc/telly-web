@@ -51,11 +51,10 @@ export class GuideController extends Observable {
     this.menu = new GuideMenuController({
       focusedRow: () => this.focusedRow(),
       focusMemory,
-      closeOptionsDialog: () => this.parts.options.closeDialog(),
     });
     this.parts = buildParts(this, deps);
     const forward = (): void => this.notify();
-    [this.engine, this.menu, this.exit, this.parts.options].forEach((source) => source.subscribe(forward));
+    [this.engine, this.menu, this.exit].forEach((source) => source.subscribe(forward));
   }
 
   get rows(): readonly GuideRow[] {

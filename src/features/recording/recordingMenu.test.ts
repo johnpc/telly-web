@@ -30,26 +30,16 @@ describe('RecordingMenu', () => {
     expect(center.scheduleProgramme).toHaveBeenCalledWith(expect.anything(), 'Later', 5, 9);
   });
 
-  it('Custom recording primes the form, Create schedules it and closes, BACK drops it', async () => {
+  it('Custom recording hands the host a fresh form; Create schedules it and closes', async () => {
     const { menu, center, shown } = rig();
-    const listener = vi.fn();
-    menu.subscribe(listener);
-    expect(menu.form).toBeNull();
-    menu.createFromForm(); // nothing open: no-op
     menu.onCustomRecording(fakeChannel());
-    expect(shown).toEqual([{ kind: 'CustomForm' }]);
-    const form = menu.form;
-    if (form === null) throw new Error('form not primed');
+    const prompt = shown[0];
+    if (prompt?.kind !== 'CustomForm') throw new Error('form not shown');
+    const { form } = prompt;
     expect(form.channel.name).toBe('News One');
-    menu.createFromForm();
-    await vi.waitFor(() => expect(shown).toEqual([{ kind: 'CustomForm' }, { kind: 'Done' }]));
+    menu.createFromForm(form);
+    await vi.waitFor(() => expect(shown[1]).toEqual({ kind: 'Done' }));
     expect(center.scheduleProgramme).toHaveBeenCalledWith(form.channel, null, form.startMs, form.endMs);
-    expect(menu.form).toBeNull();
-    menu.onCustomRecording(fakeChannel());
-    menu.dismissForm();
-    menu.dismissForm(); // idempotent
-    expect(menu.form).toBeNull();
-    expect(listener).toHaveBeenCalled();
   });
 
   it('confirmStop stops the capture and reports Done', async () => {

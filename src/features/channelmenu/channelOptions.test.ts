@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ChannelRepository } from '@/core/db/channelRepository';
 import { channelImport, freshDb } from '@/test/dbFixtures';
-import { ChannelOptionsController } from './channelOptionsController';
+import { type ChannelOptionsDialog, ChannelOptionsController } from './channelOptionsController';
+import { type ChannelOptionsHost, dialogHostOf } from './channelOptionsHost';
 import { OPTION, channelOptionRows } from './channelOptionsRows';
 import {
   DECODER_OPTIONS,
@@ -65,11 +66,41 @@ describe('channelOptionsValues', () => {
   });
 });
 
+/** A host whose single layer is the pane: the dialog lives on it. */
+function fakeHost(): { host: ChannelOptionsHost; layer: () => OptionsPane } {
+  let current: OptionsPane = { kind: 'ChannelOptions', channelId: 1, dialog: null };
+  const host = dialogHostOf(
+    () => current,
+    (layer) => {
+      current = { ...current, dialog: layer.dialog };
+    },
+  );
+  return { host, layer: () => current };
+}
+
+interface OptionsPane {
+  kind: 'ChannelOptions';
+  channelId: number;
+  dialog: ChannelOptionsDialog | null;
+}
+
 describe('ChannelOptionsController', () => {
+  it('a host whose layer is not the pane has no dialog and ignores dialog writes', () => {
+    const host = dialogHostOf<{ kind: 'Grid' }>(
+      () => ({ kind: 'Grid' }),
+      () => {
+        throw new Error('must not show');
+      },
+    );
+    expect(host.dialog()).toBeNull();
+    host.showDialog({ kind: 'Rename', channelId: 1, initial: 'x' });
+  });
   it('opens and answers the rename and picker dialogs, writing partial overrides', async () => {
     const { repository, first } = await seeded();
-    const options = new ChannelOptionsController(repository, () => false);
+    const { host, layer } = fakeHost();
+    const options = new ChannelOptionsController(repository, () => false, host);
     expect(options.onRow(first, OPTION.NAME)).toBeNull();
+    expect(layer().dialog).toMatchObject({ kind: 'Rename' });
     expect(options.dialog).toMatchObject({ kind: 'Rename', initial: 'News One' });
     options.submitRename('  Headlines ');
     expect(options.dialog).toBeNull();
@@ -95,7 +126,7 @@ describe('ChannelOptionsController', () => {
   });
   it('restores the name, toggles the external player off the fresh row, and hands effects to the host', async () => {
     const { repository, first } = await seeded();
-    const options = new ChannelOptionsController(repository, () => true);
+    const options = new ChannelOptionsController(repository, () => true, fakeHost().host);
     options.onRow(first, OPTION.RESTORE_NAME);
     options.onRow(first, OPTION.EXTERNAL_PLAYER);
     await new Promise((r) => setTimeout(r, 20));

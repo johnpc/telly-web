@@ -18,13 +18,11 @@ function make(withRow = true) {
     () => 7,
     () => rows,
   );
-  const closeOptionsDialog = vi.fn(() => false);
   const menu = new GuideMenuController({
     focusedRow: () => rows[engine.focus?.rowIndex ?? -1],
     focusMemory,
-    closeOptionsDialog,
   });
-  return { menu, engine, focusMemory, closeOptionsDialog };
+  return { menu, engine, focusMemory };
 }
 
 describe('GuideMenuController', () => {
@@ -51,10 +49,14 @@ describe('GuideMenuController', () => {
     expect(engine.focus?.cell.startMs).toBe(ORIGIN);
   });
   it('closes an open Channel-options dialog before popping the pane', () => {
-    const { menu, closeOptionsDialog } = make();
-    menu.show({ kind: 'ChannelOptions', channelId: 1 });
-    closeOptionsDialog.mockReturnValueOnce(true);
+    const { menu } = make();
+    menu.show({
+      kind: 'ChannelOptions',
+      channelId: 1,
+      dialog: { kind: 'Rename', channelId: 1, initial: 'x' },
+    });
     menu.close();
+    expect(menu.layer).toEqual({ kind: 'ChannelOptions', channelId: 1, dialog: null });
     expect(menu.layer.kind).toBe('ChannelOptions');
     menu.close();
     expect(menu.layer).toEqual(GRID);

@@ -79,7 +79,11 @@ function rowHandlers(
 }
 
 export function buildParts(controller: GuideController, deps: GuideControllerDeps): GuideParts {
-  const options = new ChannelOptionsController(deps.channels, () => externalDefaultOf(deps.settings));
+  const options = new ChannelOptionsController(
+    deps.channels,
+    () => externalDefaultOf(deps.settings),
+    controller.menu.optionsHost,
+  );
   const actions = new SheetActions(deps.channels, deps.parental, (channel) =>
     deps.tuner.zapAwayFrom(channel),
   );

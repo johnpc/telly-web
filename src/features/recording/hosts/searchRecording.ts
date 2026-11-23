@@ -12,8 +12,6 @@ export interface SearchRecording {
   /** Guide-cell parity: Record schedules the hit's exact slot (instant when it is airing now). */
   record(channel: ChannelRow, program: ProgramRow, nowMs: number): void;
   customRecording(channel: ChannelRow): void;
-  /** BACK with the form up drops its state before the overlay closes. */
-  dismiss(): void;
 }
 
 /** DVR prompts onto search overlays: the form opens, everything else closes the overlay. */
@@ -21,7 +19,7 @@ export function onSearchPrompt(
   prompt: RecordingPrompt,
   overlays: Pick<SearchOverlays, 'show' | 'dismiss'>,
 ): void {
-  if (prompt.kind === 'CustomForm') overlays.show({ kind: 'CustomRecording' });
+  if (prompt.kind === 'CustomForm') overlays.show({ kind: 'CustomRecording', form: prompt.form });
   else overlays.dismiss();
 }
 
@@ -38,13 +36,12 @@ export function createSearchRecording(
       menu.onRecordProgramme(channel, programTitle(program), program.startMs, program.endMs);
     },
     customRecording: (channel) => menu.onCustomRecording(channel),
-    dismiss: () => menu.dismissForm(),
   };
 }
 
 const perOverlays = new WeakMap<object, SearchRecording>();
 
-/** ONE adapter per search overlay stack, so the dropdown and the form screen share the primed form. */
+/** ONE adapter per search overlay stack, so the dropdown and the form screen share one DVR facade. */
 export function searchRecordingFor(overlays: SearchOverlays): SearchRecording {
   const adapter = perOverlays.get(overlays) ?? createSearchRecording(overlays);
   perOverlays.set(overlays, adapter);

@@ -20,6 +20,7 @@ export {
   type ChannelOptionsDialog,
   type ChannelOptionsEffect,
 } from './channelOptionsController';
+export { type ChannelOptionsHost, dialogHostOf } from './channelOptionsHost';
 export { OPTION, channelOptionRows } from './channelOptionsRows';
 export { externalDefaultOf, externalOn } from './channelOptionsValues';
 export { airingProgramme } from './airingProgramme';

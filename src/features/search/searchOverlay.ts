@@ -1,6 +1,7 @@
 // What covers the search screen: nothing, the programme dropdown, a branded
 // placeholder, or the DVR custom-recording form (port of Android `SearchOverlay`).
 import type { SearchProgramHit } from './searchResults';
+import type { CustomRecordingForm } from '@/features/recording/customRecordingForm';
 
 /** The dropdown rows for OK on a programme result — the guide-cell set (capture 27). */
 export const SEARCH_PROGRAM_ACTIONS = [
@@ -18,7 +19,8 @@ export type SearchOverlay =
   | { kind: 'None' }
   | { kind: 'ProgramMenu'; hit: SearchProgramHit }
   | { kind: 'ComingSoon'; feature: string }
-  | { kind: 'CustomRecording' };
+  /** DVR: the dropdown's "Custom recording" form it carries; BACK drops both. */
+  | { kind: 'CustomRecording'; form: CustomRecordingForm };
 
 export const NO_OVERLAY: SearchOverlay = { kind: 'None' };
 

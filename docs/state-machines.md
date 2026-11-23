@@ -4,7 +4,11 @@ Every "mode" the app can be in is a state machine. This catalog mirrors the
 Android repo's `docs/state-machines.md` (same names, same states) so parity
 can be checked row by row. `scripts/check-state-machines.mjs` verifies that
 every cited `owner`/`tests` path exists and that every `explicit` row's
-owner carries a `// @stateMachine('<row name>')` marker, both ways.
+owner carries a `// @stateMachine('<row name>')` marker, both ways; that the
+fullscreen overlay has exactly ONE writer (`OverlayState` mutators only inside
+`src/features/playback/overlay/playbackCommands.ts`); and that no `consume*()`
+one-shot or class-level `pending` / `armed` field appears in a file this
+catalog does not cite (add a row, never an exclusion).
 
 **One mode, one owner.** A mode is ONE discriminated union, written in ONE
 place; readers derive from it. No boolean + nullable + counter trios, no
@@ -16,11 +20,11 @@ tested · `implicit` = known gap, listed so nobody re-discovers it.
 
 ## Core
 
-| Machine              | States                                                            | Owner                               | Status   | Tests                                    |
-| -------------------- | ----------------------------------------------------------------- | ----------------------------------- | -------- | ---------------------------------------- |
-| Navigator            | typed back stack (push / pop / replaceAll)                        | `src/core/navigation/navigator.ts`  | explicit | `src/core/navigation/navigator.test.ts`  |
-| Long-press detection | Idle · Held · HoldFired                                           | `src/core/input/holdKeyDetector.ts` | explicit | `src/core/input/holdKeyDetector.test.ts` |
-| Focus engine         | one focused node per scope stack; a modal scope traps every arrow | `src/core/focus/focusEngine.ts`     | explicit | `src/core/focus/focusEngine.test.ts`     |
+| Machine              | States                                                                                                                                                                      | Owner                               | Status   | Tests                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | -------- | ---------------------------------------- |
+| Navigator            | typed back stack (push / pop / replaceAll); web-only route `Exited` = where Android would `finish()` (BACK at the root replaces the stack with it, OK restarts from `Boot`) | `src/core/navigation/navigator.ts`  | explicit | `src/core/navigation/navigator.test.ts`  |
+| Long-press detection | Idle · Held · HoldFired                                                                                                                                                     | `src/core/input/holdKeyDetector.ts` | explicit | `src/core/input/holdKeyDetector.test.ts` |
+| Focus engine         | one focused node per scope stack; a modal scope traps every arrow                                                                                                           | `src/core/focus/focusEngine.ts`     | explicit | `src/core/focus/focusEngine.test.ts`     |
 
 ## Player and playback
 
@@ -45,3 +49,20 @@ tested · `implicit` = known gap, listed so nobody re-discovers it.
 Each feature slice keeps its rows in `docs/state-machines/<slice>.md` (same
 table columns, same machine names as the Android catalog). The gate reads
 this file plus every fragment.
+
+## Known gaps (listed, not hidden)
+
+Same section as the Android catalog: splits we keep on purpose (parity, or a
+pure accumulator) are rows too, so nobody re-discovers them. Each is
+`implicit` — cited, tested where it matters, not yet one union.
+
+| Machine               | States                                                                                                                                                                          | Owner                                                                                   | Status   | Tests                                               |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| Reminder fired cache  | `ReminderEngine.handled` duplicates the PERSISTED `firedAtMs` claim within one process; it only saves a redundant update per sweep (Android lists the same gap)                 | `src/features/reminders/reminderEngine.ts`                                              | implicit | `src/features/reminders/reminderEngine.test.ts`     |
+| Engine pause flag     | `paused` lives beside `EngineState` on purpose (Android `videoEvents` keeps the same pair); `load`/`stop` reset it — converting means `Playing(paused)` on BOTH platforms       | `src/core/player/engineObservable.ts`                                                   | implicit | `src/core/player/webPlayerEngine.test.ts`           |
+| Stream session pair   | `active` url + `last` {url, options} must agree; `begin`/`end` write both, `fail`/`onStall` guard on `last`                                                                     | `src/core/player/streamSession.ts`                                                      | implicit | `src/core/player/streamTuner.test.ts`               |
+| Guide resume flag     | `GuideController.resumePending` is the consumed half of `StartDecision.tunesPreview`; cleared by the first non-empty rows emission                                              | `src/features/guide/guideController.ts`                                                 | implicit | `src/features/guide/guideController.test.ts`        |
+| Multiview entry once  | `MultiviewViewModel.started` is a one-shot re-entrancy guard for the entry pane (guarded by `channels.length`)                                                                  | `src/features/multiview/multiviewViewModel.ts`                                          | implicit | `src/features/multiview/multiviewViewModel.test.ts` |
+| Cold-start tune once  | `usePlaybackStart` tunes once per tuner via a ref + the catch-up claim; unreachable race today because the lease is stable per mount                                            | `src/features/playback/usePlaybackStart.ts`                                             | implicit | `src/features/playback/usePlaybackHooks.test.tsx`   |
+| Capture end flags     | `Capture.stopped` + `signal.aborted` + `done` both end in `finish`; guarded by the `Recording row` transitions                                                                  | `src/features/recording/captureContext.ts`, `src/features/recording/recordingEngine.ts` | implicit | `src/features/recording/recordingEngine.test.ts`    |
+| M3U parse accumulator | `ParseAccumulator.pending` is the EXTINF awaiting its URL — a parser accumulator, not a mode (Android exempts it by shape; the web cites it so the one-shot check stays strict) | `src/features/playlist/m3uParser.ts`                                                    | implicit | `src/features/playlist/m3uParser.test.ts`           |

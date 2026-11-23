@@ -37,7 +37,7 @@ describe('searchProgramMenu', () => {
     expect(hooks.toggleMyList).toHaveBeenCalledWith(ch, hit.program);
     expect(overlays.current.kind).toBe('None');
     runMenuAction('Custom recording', hit, overlays, hooks);
-    expect(overlays.current).toEqual({ kind: 'CustomRecording' });
+    expect(overlays.current).toMatchObject({ kind: 'CustomRecording' });
     runMenuAction('Program description', hit, overlays, hooks);
     expect(overlays.current).toEqual({ kind: 'ComingSoon', feature: 'Program description' });
   });

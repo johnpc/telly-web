@@ -3,6 +3,7 @@ import { SearchOverlays } from '@/features/search/searchOverlay';
 import type { RecordingCenter } from '../recordingCenter';
 import { fakeChannel } from '../recordingTestSupport';
 import { createSearchRecording, onSearchPrompt, searchRecordingFor } from './searchRecording';
+import { CustomRecordingForm } from '../customRecordingForm';
 
 const program = {
   id: 1,
@@ -19,8 +20,9 @@ const program = {
 describe('search recording', () => {
   it('maps prompts onto the search overlays: the form opens, everything else closes', () => {
     const overlays = { show: vi.fn(), dismiss: vi.fn() };
-    onSearchPrompt({ kind: 'CustomForm' }, overlays);
-    expect(overlays.show).toHaveBeenCalledWith({ kind: 'CustomRecording' });
+    const form = new CustomRecordingForm(fakeChannel(), 1_000_000);
+    onSearchPrompt({ kind: 'CustomForm', form }, overlays);
+    expect(overlays.show).toHaveBeenCalledWith({ kind: 'CustomRecording', form });
     onSearchPrompt({ kind: 'Done' }, overlays);
     onSearchPrompt({ kind: 'StopConfirm', recordingId: 1, channelName: 'x' }, overlays);
     expect(overlays.dismiss).toHaveBeenCalledTimes(2);
@@ -41,10 +43,10 @@ describe('search recording', () => {
     recording.record(fakeChannel(), program, 2_500_000);
     expect(center.toggleInstant).toHaveBeenCalledTimes(1);
     recording.customRecording(fakeChannel());
-    expect(overlays.current).toEqual({ kind: 'CustomRecording' });
-    expect(recording.menu.form).not.toBeNull();
-    recording.dismiss();
-    expect(recording.menu.form).toBeNull();
+    expect(overlays.current).toMatchObject({
+      kind: 'CustomRecording',
+      form: expect.any(CustomRecordingForm),
+    });
   });
 
   it('keeps one adapter per overlay stack', () => {

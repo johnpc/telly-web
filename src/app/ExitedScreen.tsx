@@ -1,17 +1,16 @@
 import type { JSX } from 'react';
 import { Focusable } from '@/core/focus/Focusable';
 import { FocusScope } from '@/core/focus/FocusScope';
-
-interface ExitedScreenProps {
-  onRestart: () => void;
-}
+import { useNavigator } from '@/core/navigation/useNavigator';
 
 /**
  * The web has no launcher to return to: where the Android app would finish,
- * telly-web shows this frame (and tries `history.back()` first when there is
- * somewhere to go). OK starts over.
+ * telly-web shows this frame — the `Exited` route, so the Navigator is the one
+ * owner of "the app has exited". OK starts over from Boot.
  */
-export function ExitedScreen({ onRestart }: ExitedScreenProps): JSX.Element {
+export function ExitedScreen(): JSX.Element {
+  const navigator = useNavigator();
+  const onRestart = (): void => navigator.replaceAll({ kind: 'Boot' });
   return (
     <FocusScope id="exited" trap autoFocus="first">
       <div

@@ -4,6 +4,7 @@ import type { GuideCell } from '@/features/guide/guideModel';
 import type { RecordingCenter } from '../recordingCenter';
 import { fakeChannel } from '../recordingTestSupport';
 import { createGuideRecording, layerFor } from './guideRecording';
+import { CustomRecordingForm } from '../customRecordingForm';
 
 const ROW_MENU: GuideLayer = { kind: 'RowMenu' };
 const GRID: GuideLayer = { kind: 'Grid' };
@@ -17,7 +18,12 @@ describe('guide recording prompts', () => {
       channelName: 'News One',
       back: GRID,
     });
-    expect(layerFor({ kind: 'CustomForm' }, ROW_MENU)).toEqual({ kind: 'CustomRecording', back: ROW_MENU });
+    const form = new CustomRecordingForm(fakeChannel(), 1_000_000);
+    expect(layerFor({ kind: 'CustomForm', form }, ROW_MENU)).toEqual({
+      kind: 'CustomRecording',
+      form,
+      back: ROW_MENU,
+    });
   });
 });
 
@@ -84,8 +90,9 @@ describe('createGuideRecording', () => {
   it('custom recording primes the form; the Stop confirm stops the capture', async () => {
     const { shown, center, recording } = rig();
     recording.customRecording(fakeChannel());
-    expect(shown).toEqual([{ kind: 'CustomRecording', back: ROW_MENU }]);
-    expect(recording.menu.form).not.toBeNull();
+    expect(shown).toEqual([
+      { kind: 'CustomRecording', form: expect.any(CustomRecordingForm), back: ROW_MENU },
+    ]);
     recording.confirmStop(5);
     await vi.waitFor(() => expect(center.stop).toHaveBeenCalledWith(5));
     expect(shown[1]).toEqual(GRID);

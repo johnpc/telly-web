@@ -38,6 +38,7 @@ function Pushed({
       return (
         <ChannelOptionsScreen
           channelId={overlay.channelId}
+          dialog={overlay.dialog}
           options={ctl.menu.options}
           onRow={(channel, rowId) => ctl.menu.onChannelOption(channel, rowId)}
           onBack={() => ctl.menu.closeChannelOptions()}

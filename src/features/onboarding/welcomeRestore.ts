@@ -13,7 +13,9 @@ export type RestoreOffer =
   /** A readable telly backup: restoring applies `json` directly. */
   | { kind: 'Ready'; json: string }
   /** A previous install's file exists but is hidden until an access grant. */
-  | { kind: 'NeedsAccess' };
+  | { kind: 'NeedsAccess' }
+  /** OK on a Ready pill: the backup is being applied ("Restoring…"); a second OK is ignored. */
+  | { kind: 'Restoring'; json: string };
 
 export const NO_RESTORE: RestoreOffer = { kind: 'None' };
 

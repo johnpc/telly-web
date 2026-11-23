@@ -37,13 +37,22 @@ describe('RecordingsLibrary', () => {
     expect(library.confirm?.kind).toBe('Delete');
   });
 
-  it('accepting Stop asks the center; the row then reads STOPPING, which OK plays instead of re-asking', async () => {
+  it('accepting Stop holds Stopping(row): an immediate OK on it plays instead of re-asking; the closed capture lands Browsing', async () => {
     const { library, center } = rig();
-    library.onRowClick(rowOf('RECORDING', 7));
+    let closed = (): void => undefined;
+    center.stop.mockReturnValueOnce(new Promise<void>((resolve) => (closed = resolve)));
+    const recording = rowOf('RECORDING', 7);
+    library.onRowClick(recording);
     expect(library.mode.kind).toBe('Confirming');
     library.accept();
     expect(center.stop).toHaveBeenCalledWith(7);
-    expect(library.mode).toEqual({ kind: 'Browsing' });
+    expect(library.mode).toEqual({ kind: 'Stopping', row: recording });
+    library.onRowClick(recording); // the list still says RECORDING: plays anyway
+    expect(library.playing?.entry.id).toBe(7);
+    library.stopPlaying();
+    closed();
+    await Promise.resolve();
+    expect(library.mode).toEqual({ kind: 'Browsing' }); // Playing had already left Stopping; a late close is a no-op there too
     library.onRowClick(rowOf('STOPPING', 7));
     expect(library.playing?.entry.id).toBe(7);
     library.dismissConfirm(); // not confirming: no-op
@@ -52,7 +61,20 @@ describe('RecordingsLibrary', () => {
     library.stopPlaying();
     library.accept(); // nothing pending: no-op
     expect(center.delete).not.toHaveBeenCalled();
+  });
+
+  it('a Stop that is still closing when OK lands on another row leaves Stopping; the close then finds Browsing already', async () => {
+    const { library, center } = rig();
+    let closed = (): void => undefined;
+    center.stop.mockReturnValueOnce(new Promise<void>((resolve) => (closed = resolve)));
+    library.onRowClick(rowOf('RECORDING', 7));
+    library.accept();
+    library.onRowClick(rowOf('SCHEDULED', 8));
+    expect(library.mode.kind).toBe('Confirming');
+    library.dismissConfirm();
+    closed();
     await Promise.resolve();
+    expect(library.mode).toEqual({ kind: 'Browsing' });
   });
 
   it('accepting Cancel or Delete removes the entry', () => {

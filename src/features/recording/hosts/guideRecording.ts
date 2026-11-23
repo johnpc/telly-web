@@ -45,7 +45,7 @@ export function layerFor(prompt: RecordingPrompt, current: GuideLayer): GuideLay
         back: { kind: 'Grid' },
       };
     case 'CustomForm':
-      return { kind: 'CustomRecording', back: current };
+      return { kind: 'CustomRecording', form: prompt.form, back: current };
   }
 }
 

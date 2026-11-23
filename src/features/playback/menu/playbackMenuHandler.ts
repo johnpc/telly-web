@@ -111,8 +111,10 @@ export class PlaybackMenuHandler {
   /** BACK on the pane closes an open rename/picker dialog first, then lands on the panel. */
   closeChannelOptions(): void {
     const overlay = this.overlay;
-    if (overlay.kind !== 'ChannelOptions' || this.deps.options.closeDialog()) return;
-    this.deps.commands.execute(popTo(overlay.back));
+    if (overlay.kind !== 'ChannelOptions') return;
+    this.deps.commands.execute(
+      overlay.dialog === null ? popTo(overlay.back) : show({ ...overlay, dialog: null }),
+    );
   }
 
   /** The Block/Unblock PIN dialog's commit: a verified (or freshly set) PIN flips the flag; a wrong PIN keeps the dialog up. */

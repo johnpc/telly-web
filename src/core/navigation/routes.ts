@@ -33,7 +33,9 @@ export type Route =
   /** Fullscreen seekable playback of one VOD item, keyed for resume. */
   | { kind: 'VodPlayback'; itemKey: string }
   /** The Recordings / DVR library; BACK pops back to wherever it was opened from. */
-  | { kind: 'Recordings' };
+  | { kind: 'Recordings' }
+  /** Web-only: where Android would `finish()`, the shell shows the exited frame (OK starts over). */
+  | { kind: 'Exited' };
 
 export type RouteKind = Route['kind'];
 

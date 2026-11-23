@@ -1,5 +1,7 @@
 import type { ChannelRow } from '@/core/db/types';
+import type { ChannelOptionsDialog } from '@/features/channelmenu/channelOptionsController';
 import type { BlockPinMode } from '@/features/channelmenu/sheetActions';
+import type { CustomRecordingForm } from '@/features/recording/customRecordingForm';
 import type { GroupToolSession } from '@/features/groups/groupToolSession';
 import type { TrackPickerKind } from '../tracks/trackPickerKind';
 
@@ -30,16 +32,16 @@ export type PlaybackOverlay =
   | { kind: 'Description'; channel: ChannelRow; back: PlaybackOverlay }
   /** The sheet's Block/Unblock PIN dialog; BACK cancels back to the sheet. */
   | { kind: 'BlockPin'; channel: ChannelRow; mode: BlockPinMode; back: PlaybackOverlay }
-  /** The §41 "Channel options" pane: it REPLACES the sheet, so `back` is the panel, never the sheet. */
-  | { kind: 'ChannelOptions'; channelId: number; back: PlaybackOverlay }
+  /** The §41 "Channel options" pane (its rename/picker dialog is a field here): it REPLACES the sheet, so `back` is the panel, never the sheet. */
+  | { kind: 'ChannelOptions'; channelId: number; dialog: ChannelOptionsDialog | null; back: PlaybackOverlay }
   /** A pushed group/bulk tool screen (Create group, Assign EPG, …); BACK pops to the sheet. */
   | { kind: 'GroupTool'; session: GroupToolSession; back: PlaybackOverlay }
   /** Quick-bar track picker dialog (video / audio / audio-sync / CC). Sticky. */
   | { kind: 'TrackPicker'; picker: TrackPickerKind; back: PlaybackOverlay }
   /** DVR: "Stop recording?" behind a second Record on a channel already being captured. */
   | { kind: 'RecordingStop'; recordingId: number; channelName: string; back: PlaybackOverlay }
-  /** DVR: the sheet's "Custom recording" form; BACK pops back to the sheet. */
-  | { kind: 'CustomRecording'; back: PlaybackOverlay };
+  /** DVR: the sheet's "Custom recording" form it carries; BACK pops back to the sheet. */
+  | { kind: 'CustomRecording'; form: CustomRecordingForm; back: PlaybackOverlay };
 
 export type PushedOverlay = Extract<PlaybackOverlay, { back: PlaybackOverlay }>;
 

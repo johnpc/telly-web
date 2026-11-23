@@ -61,7 +61,8 @@ export function guideSheetHost(deps: SheetActionDeps): SheetHost {
     pushBlockPin: (channel, mode) =>
       menu.show({ kind: 'BlockPin', channelId: channel.id, mode, back: menu.layer }),
     pushDescription: () => menu.show(descriptionLayer(deps.info())),
-    showChannelOptions: (channel) => menu.show({ kind: 'ChannelOptions', channelId: channel.id }),
+    showChannelOptions: (channel) =>
+      menu.show({ kind: 'ChannelOptions', channelId: channel.id, dialog: null }),
     openGroupTool: (item, channel) => {
       const input = { channel, group: deps.selectedGroup(), groups: deps.customGroups() };
       openGroupTool(toolHost(menu), deps.groupTools, item, input);

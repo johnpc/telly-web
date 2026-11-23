@@ -8,7 +8,7 @@ export const RESTORE_PILL_ID = 'welcome-restore';
 
 export interface WelcomeRestoreState {
   offer: RestoreOffer;
-  /** A restore is running ("Restoring…"); a second OK is ignored. */
+  /** Derived: the offer is `Restoring` ("Restoring…"); a second OK is ignored. */
   busy: boolean;
   activate: () => void;
 }
@@ -17,23 +17,26 @@ export interface WelcomeRestoreState {
  * The welcome screen's restore affordance (Android `WelcomeScreen` +
  * `WelcomeScreenRestorePill`): probe once on mount, focus the pill the
  * moment an offer resolves (focused-first), apply a Ready backup on OK and
- * land per the cold-start policy when channels came back.
+ * land per the cold-start policy when channels came back. ONE `RestoreOffer`
+ * value: a running restore is its `Restoring` variant, not a flag beside it.
  */
 export function useRestoreOffer(hooks: RestoreHooks, engine: FocusEngine = focusEngine): WelcomeRestoreState {
   const latest = useRef(hooks);
   useEffect(() => {
     latest.current = hooks;
   }, [hooks]);
-  const offer = useProbedOffer(latest);
+  const [offer, setOffer] = useProbedOffer(latest);
   useLayoutEffect(() => {
     if (offer.kind !== 'None') engine.focus(RESTORE_PILL_ID);
   }, [offer, engine]);
-  const [busy, activate] = useRestoreActivation(latest, offer);
-  return { offer, busy, activate };
+  const activate = useRestoreActivation(latest, offer, setOffer);
+  return { offer, busy: offer.kind === 'Restoring', activate };
 }
 
+type OfferState = [RestoreOffer, (next: RestoreOffer) => void];
+
 /** Probes once on mount; a late result after unmount is dropped. */
-function useProbedOffer(latest: RefObject<RestoreHooks>): RestoreOffer {
+function useProbedOffer(latest: RefObject<RestoreHooks>): OfferState {
   const [offer, setOffer] = useState<RestoreOffer>(NO_RESTORE);
   useEffect(() => {
     let live = true;
@@ -44,20 +47,23 @@ function useProbedOffer(latest: RefObject<RestoreHooks>): RestoreOffer {
       live = false;
     };
   }, [latest]);
-  return offer;
+  return [offer, setOffer];
 }
 
-/** OK on the pill: apply a Ready backup once (busy until it fails), or request access. */
-function useRestoreActivation(latest: RefObject<RestoreHooks>, offer: RestoreOffer): [boolean, () => void] {
-  const [busy, setBusy] = useState(false);
-  const activate = useCallback((): void => {
+/** OK on the pill: apply a Ready backup once (Restoring until it fails, back to Ready then), or request access. */
+function useRestoreActivation(
+  latest: RefObject<RestoreHooks>,
+  offer: RestoreOffer,
+  setOffer: (next: RestoreOffer) => void,
+): () => void {
+  return useCallback((): void => {
     if (offer.kind === 'NeedsAccess') latest.current.requestAccess();
-    if (offer.kind !== 'Ready' || busy) return;
-    setBusy(true);
-    void latest.current.restore(offer.json).then((landed) => {
+    if (offer.kind !== 'Ready') return;
+    const { json } = offer;
+    setOffer({ kind: 'Restoring', json });
+    void latest.current.restore(json).then((landed) => {
       if (landed) latest.current.land();
-      else setBusy(false);
+      else setOffer(offer);
     });
-  }, [latest, offer, busy]);
-  return [busy, activate];
+  }, [latest, offer, setOffer]);
 }

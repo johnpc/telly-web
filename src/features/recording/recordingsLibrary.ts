@@ -49,13 +49,16 @@ export function stopConfirmCopy(channelName: string): { title: string; body: str
 // @stateMachine('Recordings library')
 /**
  * The Recordings library screen's mode (Android `RecordingsViewModel`): ONE
- * value — Browsing · Confirming(stop/cancel/delete) · Playing(row). A row's
- * status comes from the row alone: a Stop the user accepted shows as the
- * persisted STOPPING status, which OK plays like DONE (no optimistic copy).
+ * value — Browsing · Confirming(stop/cancel/delete) · Stopping(row) ·
+ * Playing(row). `Stopping` is the accepted Stop until the center reports the
+ * capture closed: an immediate OK on THAT row plays it instead of re-asking,
+ * even before the store's STOPPING/DONE status has reached the list (the
+ * window Android's optimistic `stoppedIds` copy papered over).
  */
 export type LibraryMode =
   | { readonly kind: 'Browsing' }
   | { readonly kind: 'Confirming'; readonly confirm: RecordingsConfirm }
+  | { readonly kind: 'Stopping'; readonly row: RecordingListRow }
   | { readonly kind: 'Playing'; readonly row: RecordingListRow };
 
 const BROWSING: LibraryMode = { kind: 'Browsing' };
@@ -89,7 +92,7 @@ export class RecordingsLibrary extends Observable {
 
   /** OK: play DONE (and stopping) captures, confirm stop/cancel/delete for the rest. */
   onRowClick(row: RecordingListRow): void {
-    const confirm = confirmFor(row);
+    const confirm = this.isStopping(row.entry.id) ? null : confirmFor(row);
     this.set(confirm === null ? { kind: 'Playing', row } : { kind: 'Confirming', confirm });
   }
 
@@ -98,14 +101,21 @@ export class RecordingsLibrary extends Observable {
     this.set({ kind: 'Confirming', confirm: { kind: 'Delete', row } });
   }
 
-  /** The confirm's affirmative action. */
+  /** The confirm's affirmative action; a Stop holds `Stopping(row)` until the capture has closed. */
   accept(): void {
     if (this.current.kind !== 'Confirming') return;
     const { confirm } = this.current;
+    if (confirm.kind === 'Stop') return this.beginStop(confirm.row);
     this.set(BROWSING);
-    const id = confirm.row.entry.id;
-    if (confirm.kind === 'Stop') void this.center.stop(id);
-    else void this.center.delete(id);
+    void this.center.delete(confirm.row.entry.id);
+  }
+
+  private beginStop(row: RecordingListRow): void {
+    const id = row.entry.id;
+    this.set({ kind: 'Stopping', row });
+    void this.center.stop(id).then(() => {
+      if (this.isStopping(id)) this.set(BROWSING);
+    });
   }
 
   dismissConfirm(): void {
@@ -115,6 +125,10 @@ export class RecordingsLibrary extends Observable {
   /** BACK from the capture player returns to the list. */
   stopPlaying(): void {
     if (this.current.kind === 'Playing') this.set(BROWSING);
+  }
+
+  private isStopping(id: number): boolean {
+    return this.current.kind === 'Stopping' && this.current.row.entry.id === id;
   }
 
   private set(next: LibraryMode): void {

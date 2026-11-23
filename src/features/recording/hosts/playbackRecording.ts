@@ -51,7 +51,7 @@ export function overlayFor(prompt: RecordingPrompt, current: PlaybackOverlay): P
         back: doneTarget(current),
       };
     case 'CustomForm':
-      return { kind: 'CustomRecording', back: current };
+      return { kind: 'CustomRecording', form: prompt.form, back: current };
   }
 }
 

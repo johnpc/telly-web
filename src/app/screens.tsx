@@ -2,6 +2,7 @@ import type { JSX } from 'react';
 import type { Route, RouteKind } from '@/core/navigation/routes';
 import { BootScreen } from './BootScreen';
 import { ComingSoonScreen } from './ComingSoonScreen';
+import { ExitedScreen } from './ExitedScreen';
 import { HistoryScreen } from '@/features/history/HistoryScreen';
 import { ChannelNamesEditorScreen } from '@/features/channelmenu/ChannelNamesEditorScreen';
 import { GuideScreen } from '@/features/guide/GuideScreen';
@@ -25,6 +26,7 @@ type ScreenFactory = (route: Route) => JSX.Element;
  */
 const SCREENS: Partial<Record<RouteKind, ScreenFactory>> = {
   Boot: () => <BootScreen />,
+  Exited: () => <ExitedScreen />,
   Playback: () => <PlaybackScreen />,
   History: () => <HistoryScreen />,
   Welcome: () => <WelcomeScreen />,

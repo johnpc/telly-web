@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks';
-import { useSyncExternalStore, type JSX } from 'react';
+import type { JSX } from 'react';
 import { type ChannelRepository, channelRepository } from '@/core/db/channelRepository';
 import { type ChannelRow, displayName } from '@/core/db/types';
 import { TellySettings } from '@/core/settings/tellySettings';
@@ -13,6 +13,8 @@ import { externalOn, pickerRows } from './channelOptionsValues';
 
 interface ChannelOptionsProps {
   channelId: number;
+  /** The host layer's open dialog (the pane renders it instead of its rows). */
+  dialog: ChannelOptionsDialog | null;
   options: ChannelOptionsController;
   /** A pane row activation on the FRESH row (the host finishes Block / Hide / names editor). */
   onRow: (channel: ChannelRow, rowId: string) => void;
@@ -80,8 +82,10 @@ function OptionsRows({
 }
 
 /** Dialog when one is open, else the rows. */
-function OptionsPane(props: PaneProps & Pick<ChannelOptionsProps, 'onRow'>): JSX.Element {
-  const dialog = props.options.dialog;
+function OptionsPane({
+  dialog,
+  ...props
+}: PaneProps & Pick<ChannelOptionsProps, 'onRow' | 'dialog'>): JSX.Element {
   return dialog === null ? <OptionsRows {...props} /> : <OptionsDialog dialog={dialog} {...props} />;
 }
 
@@ -92,12 +96,13 @@ function OptionsPane(props: PaneProps & Pick<ChannelOptionsProps, 'onRow'>): JSX
  */
 export function ChannelOptionsScreen({
   channelId,
+  dialog,
   options,
   onRow,
   onBack,
   channels = channelRepository,
 }: ChannelOptionsProps): JSX.Element | null {
-  useSyncExternalStore(options.subscribe, () => options.version);
   const channel = useLiveQuery(() => channels.byId(channelId), [channels, channelId]);
-  return channel ? <OptionsPane channel={channel} options={options} onRow={onRow} onBack={onBack} /> : null;
+  if (!channel) return null;
+  return <OptionsPane channel={channel} dialog={dialog} options={options} onRow={onRow} onBack={onBack} />;
 }

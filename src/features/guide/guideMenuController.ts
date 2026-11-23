@@ -1,3 +1,4 @@
+import { type ChannelOptionsHost, dialogHostOf } from '@/features/channelmenu/channelOptionsHost';
 import type { GuideFocusMemory } from './guideFocusMemory';
 import { GRID, type GuideLayer, ROW_MENU, backOf } from './guideLayer';
 import type { GuideCell, GuideRow } from './guideModel';
@@ -7,8 +8,6 @@ import { Observable } from './observable';
 export interface GuideMenuDeps {
   focusedRow: () => GuideRow | undefined;
   focusMemory: GuideFocusMemory;
-  /** The Channel-options pane's in-pane dialog close; true when one was open. */
-  closeOptionsDialog: () => boolean;
 }
 
 /**
@@ -28,6 +27,14 @@ export class GuideMenuController extends Observable {
     return this.current;
   }
 
+  /** The Channel-options pane's dialog lives on the `ChannelOptions` layer; this is its accessor. */
+  get optionsHost(): ChannelOptionsHost {
+    return dialogHostOf(
+      () => this.layer,
+      (layer) => this.show(layer),
+    );
+  }
+
   /** The channel the sheet scrim dims AROUND (the originating row stays bright). */
   get sheetChannelId(): number | null {
     return this.deps.focusMemory.savedChannelId;
@@ -45,8 +52,10 @@ export class GuideMenuController extends Observable {
 
   /** BACK pops one level; an open Channel-options dialog closes first, keeping the pane up. */
   close(): void {
-    if (this.current.kind === 'ChannelOptions' && this.deps.closeOptionsDialog()) return;
-    this.show(backOf(this.current));
+    const current = this.current;
+    if (current.kind === 'ChannelOptions' && current.dialog !== null)
+      return this.show({ ...current, dialog: null });
+    this.show(backOf(current));
   }
 
   /** Long-OK on a focused cell opens the anchored dropdown (capture 27). */

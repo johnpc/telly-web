@@ -23,7 +23,6 @@ function make(): GuideCommandDeps & { menu: GuideMenuController; activate: Retur
   const menu = new GuideMenuController({
     focusedRow: () => rows[0],
     focusMemory,
-    closeOptionsDialog: () => false,
   });
   const activate = vi.fn();
   return { engine, menu, rows: () => rows, pastDays: () => 7, visibleRows: () => 1, activate };

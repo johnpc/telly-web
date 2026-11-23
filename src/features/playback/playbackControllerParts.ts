@@ -11,6 +11,7 @@ import type { BlockGate } from './gate/blockGate';
 import type { PlaybackNavigation } from './menu/menuNavigation';
 import { togglePanelMyList } from './menu/panelMyList';
 import { PlaybackMenuHandler } from './menu/playbackMenuHandler';
+import { overlayDialogHost } from './menu/playbackSheetHost';
 import type { ControllerDeps } from './playbackController';
 import type { OverlayState, OverlayTimers } from './overlay/overlayState';
 import { panelTimeoutsForSeconds } from './overlay/panelTimeouts';
@@ -82,7 +83,11 @@ export function buildMenu(
   const menu = new PlaybackMenuHandler({
     actions:
       deps.actions ?? new SheetActions(channelRepository, parental, (channel) => tuner.zapAwayFrom(channel)),
-    options: new ChannelOptionsController(channelRepository, () => externalDefaultOf(deps.settings)),
+    options: new ChannelOptionsController(
+      channelRepository,
+      () => externalDefaultOf(deps.settings),
+      overlayDialogHost(commands),
+    ),
     groupTools: new GroupTools(createGroupToolStore(), parental),
     commands,
     tuner,

@@ -1,4 +1,6 @@
+import type { ChannelOptionsDialog } from '@/features/channelmenu/channelOptionsController';
 import type { BlockPinMode } from '@/features/channelmenu/sheetActions';
+import type { CustomRecordingForm } from '@/features/recording/customRecordingForm';
 import type { GroupToolSession } from '@/features/groups/groupToolSession';
 import type { GuideInfoData } from './guideInfoBuilder';
 import { type GuideCell, NO_INFORMATION } from './guideModel';
@@ -15,14 +17,15 @@ export type GuideLayer =
   | { kind: 'RowMenu' }
   | { kind: 'ComingSoon'; feature: string; back: GuideLayer }
   | { kind: 'Description'; title: string; text: string; back: GuideLayer }
-  | { kind: 'ChannelOptions'; channelId: number }
+  /** The §41 pane; its rename/picker dialog is a field here, so BACK pops dialog, then pane. */
+  | { kind: 'ChannelOptions'; channelId: number; dialog: ChannelOptionsDialog | null }
   | { kind: 'BlockPin'; channelId: number; mode: BlockPinMode; back: GuideLayer }
   | { kind: 'GroupPin'; group: string }
   | { kind: 'GroupTool'; session: GroupToolSession }
   /** DVR: "Stop recording?" behind a second Record on a channel already being captured. */
   | { kind: 'RecordingStop'; recordingId: number; channelName: string; back: GuideLayer }
-  /** DVR: the "Custom recording" form; BACK pops back to the sheet / dropdown's grid. */
-  | { kind: 'CustomRecording'; back: GuideLayer };
+  /** DVR: the "Custom recording" form it carries; BACK pops back to the sheet / dropdown's grid. */
+  | { kind: 'CustomRecording'; form: CustomRecordingForm; back: GuideLayer };
 
 export const GRID: GuideLayer = { kind: 'Grid' };
 export const GROUPS: GuideLayer = { kind: 'Groups' };

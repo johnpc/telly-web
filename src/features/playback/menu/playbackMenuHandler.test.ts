@@ -15,6 +15,7 @@ import { PlaybackCommands, show } from '../overlay/playbackCommands';
 import { NONE, PANEL } from '../overlay/playbackOverlay';
 import { playbackNavigationOf } from './menuNavigation';
 import { PlaybackMenuHandler } from './playbackMenuHandler';
+import { overlayDialogHost } from './playbackSheetHost';
 
 async function make(pin: string | null = '2468') {
   const db = freshDb();
@@ -39,7 +40,7 @@ async function make(pin: string | null = '2468') {
   const toggleMyList = vi.fn();
   const handler = new PlaybackMenuHandler({
     actions,
-    options: new ChannelOptionsController(channels, () => false),
+    options: new ChannelOptionsController(channels, () => false, overlayDialogHost(commands)),
     groupTools: new GroupTools(createGroupToolStore(new CustomGroupRepository(db), channels), parental),
     commands,
     tuner,
@@ -137,7 +138,7 @@ describe('PlaybackMenuHandler', () => {
     handler.closeChannelOptions();
     handler.openChannelMenu(1);
     handler.onMenuItem('Channel options');
-    expect(commands.overlay).toEqual({ kind: 'ChannelOptions', channelId: 1, back: PANEL });
+    expect(commands.overlay).toEqual({ kind: 'ChannelOptions', channelId: 1, dialog: null, back: PANEL });
     expect(handler.menuChannel()?.id).toBe(1);
     handler.onChannelOption(channel(1), OPTION.NAME);
     expect(handler.options.dialog?.kind).toBe('Rename');
