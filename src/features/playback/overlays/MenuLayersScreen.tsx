@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { programTitle } from '@/features/epg/nowNext';
+import { recordingLayer } from '@/features/recording';
 import { BLOCK_PIN_TITLES } from '../gate/channelBlocker';
 import { playbackGate } from '../gate/playbackGate';
 import { PinPrompt } from '../gate/PinPromptScreen';
@@ -83,6 +84,8 @@ function Pushed({
           onBack={back}
         />
       );
+    default:
+      return recordingLayer(overlay, ctl.record, back);
   }
 }
 
@@ -91,11 +94,7 @@ export function MenuLayers({
   view,
   ctl,
   session,
-}: {
-  view: PlaybackView;
-  ctl: PlaybackController;
-  session: PlaybackSession;
-}): JSX.Element | null {
+}: Omit<LayerProps, 'instant'> & { view: PlaybackView }): JSX.Element | null {
   const { overlay, source, instant } = view;
   if (overlay.kind === 'ChannelMenu')
     return <Sheet channelId={overlay.channelId} ctl={ctl} session={session} instant={instant} />;

@@ -64,7 +64,8 @@ export function usePlaybackController(
   );
   useKeyHandler((key: RemoteKey) => ctl.onKey(key));
   useVisibilitySuspend(ctl.lifecycle);
-  usePlaybackStart(tuner, session.channels);
+  usePlaybackStart(tuner, session.channels, () => ctl.catchup.resumePending());
+  useEffect(() => ctl.catchup.watch(), [ctl]);
   useReplayKeys(heldKeys, session.channels.length > 0, ctl.onKey);
   usePipWiring(engine, pip, ctl);
   useResizeMode(engine);

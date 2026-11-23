@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import { FocusScope } from '@/core/focus/FocusScope';
 import { useFocusedId } from '@/core/focus/useFocusedId';
+import type { TransportCatchup } from '@/features/catchup';
 import { Icon } from '../ui/IconsScreen';
 import { ProgressBar } from '../ui/ProgressBarScreen';
 import { type CardActions, CardsRow } from './CardsRowScreen';
@@ -16,6 +17,8 @@ interface InfoOverlayProps {
   recents: readonly RecentCard[];
   style: PanelStyle;
   transport: boolean;
+  /** Non-null during catch-up: the transport row becomes the seek transport. */
+  catchup?: TransportCatchup | null;
   actions: CardActions;
   onFeature: (feature: string) => void;
 }
@@ -31,6 +34,7 @@ export function InfoOverlay({
   recents,
   style,
   transport,
+  catchup = null,
   actions,
   onFeature,
 }: InfoOverlayProps): JSX.Element {
@@ -44,7 +48,7 @@ export function InfoOverlay({
         <div className="mt-[1.25rem] px-[5rem]">
           <ProgressBar permille={data.progressPermille} thumb />
         </div>
-        {transport && <TransportRow data={data} onFeature={onFeature} />}
+        {transport && <TransportRow data={data} onFeature={onFeature} catchup={catchup} />}
         <div className="relative mt-[3.75rem] pb-[3.625rem]">
           <CardsRow recents={recents} actions={actions} />
           {line === null ? (

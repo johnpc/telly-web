@@ -35,15 +35,15 @@ When('I focus the channel row {string}', async ({ world }, name: string) => {
 });
 
 Then('the channel row {string} is marked favorite', async ({ world }, name: string) => {
-  const row = world.page.getByTestId('channel-edit-row').filter({ hasText: name });
+  const row = world.page.locator(`[data-testid="channel-edit-row"][data-channel-name="${name}"]`);
   await expect(row).toHaveAttribute('data-favorite', 'true');
 });
 
 Then('the channel row {string} is listed above {string}', async ({ world }, above: string, below: string) => {
   const rows = world.page.getByTestId('channel-edit-row');
-  await expect(rows.filter({ hasText: above })).toBeVisible();
-  const names = await rows.allInnerTexts();
-  const indexOf = (name: string): number => names.findIndex((text) => text.includes(name));
+  await expect(rows.filter({ hasText: above }).first()).toBeVisible();
+  const names = await rows.evaluateAll((els) => els.map((el) => el.getAttribute('data-channel-name') ?? ''));
+  const indexOf = (name: string): number => names.indexOf(name);
   expect(indexOf(above)).toBeGreaterThanOrEqual(0);
   expect(indexOf(above)).toBeLessThan(indexOf(below));
 });

@@ -15,16 +15,22 @@ export function startOrResume(tuner: Pick<TuneController, 'current' | 'start' | 
 
 /**
  * Runs `startOrResume` once per tuner, as soon as the channel list has
- * arrived. The list is fed to the tuner here too: this child effect runs
- * BEFORE the session hook's own feed effect in the mounting commit.
+ * arrived — unless `claim` owns the first tune (the guide's pending
+ * catch-up request, Android `if (!catchup.resumePending()) tuner.start()`).
+ * The list is fed to the tuner here too: this child effect runs BEFORE the
+ * session hook's own feed effect in the mounting commit.
  */
-export function usePlaybackStart(tuner: TuneController, channels: readonly ChannelRow[]): void {
+export function usePlaybackStart(
+  tuner: TuneController,
+  channels: readonly ChannelRow[],
+  claim: () => boolean = () => false,
+): void {
   const started = useRef<TuneController | null>(null);
   const ready = channels.length > 0;
   useEffect(() => {
     if (!ready || started.current === tuner) return;
     started.current = tuner;
     tuner.setChannels(channels);
-    startOrResume(tuner);
-  }, [tuner, ready, channels]);
+    if (!claim()) startOrResume(tuner);
+  }, [tuner, ready, channels, claim]);
 }

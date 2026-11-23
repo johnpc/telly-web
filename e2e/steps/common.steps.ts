@@ -23,8 +23,8 @@ When('I press back', async ({ world }) => world.press('Escape'));
 When('I press menu', async ({ world }) => world.press('ContextMenu'));
 When('I press channel up', async ({ world }) => world.press('PageUp'));
 When('I press channel down', async ({ world }) => world.press('PageDown'));
-When('I press fast-forward', async ({ world }) => world.press('MediaFastForward'));
-When('I press rewind', async ({ world }) => world.press('MediaRewind'));
+When('I press fast-forward', async ({ world }) => world.press('MediaTrackNext'));
+When('I press rewind', async ({ world }) => world.press('MediaTrackPrevious'));
 When('I wait {int} seconds', async ({ world }, s: number) => world.page.waitForTimeout(s * 1000));
 
 When('I select {string}', async ({ world }, text: string) => world.select(text));

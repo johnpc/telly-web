@@ -4,6 +4,7 @@ import { RemoteKeysProvider } from '@/core/input/RemoteKeysProvider';
 import { useNavigator } from '@/core/navigation/useNavigator';
 import { useRoute } from '@/core/navigation/useRoute';
 import { SoftRemote } from '@/core/ui/SoftRemote';
+import { RecordingsHost } from '@/features/recording';
 import { RemindersHost } from '@/features/reminders';
 import { useApplyAppearance, useConfigAutoBackup } from '@/features/settings';
 import { ExitedScreen } from './ExitedScreen';
@@ -37,6 +38,7 @@ export function RootScreen(): JSX.Element {
         </div>
       </FocusScope>
       <RemindersHost />
+      <RecordingsHost />
       <SoftRemote />
     </RemoteKeysProvider>
   );

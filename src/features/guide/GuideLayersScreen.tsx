@@ -2,6 +2,7 @@ import type { JSX } from 'react';
 import { GroupToolScreen } from '@/features/groups/GroupToolScreen';
 import { PinEntryScreen } from '@/features/groups/PinEntryScreen';
 import { ToolPaneScreen } from '@/features/groups/ToolPaneScreen';
+import { RecordingLayerScreen } from '@/features/recording';
 import { ChannelOptionsScreen } from './ChannelOptionsScreen';
 import { MessageScreen } from './MessageScreen';
 import type { GuideController } from './guideController';
@@ -23,6 +24,15 @@ export function GuideLayersScreen({ controller }: { controller: GuideController 
       return <MessageScreen headline={layer.title} subtitle={layer.text} testId="guide-description" />;
     case 'ComingSoon':
       return <MessageScreen headline={layer.feature} subtitle={COMING_SOON} testId="coming-soon" />;
+    case 'RecordingStop':
+    case 'CustomRecording':
+      return (
+        <RecordingLayerScreen
+          layer={layer}
+          record={controller.parts.recording}
+          onBack={() => controller.menu.close()}
+        />
+      );
     case 'BlockPin':
       return (
         <ToolPaneScreen scopeId="guide-pin" title={layer.mode} testId="guide-pin">

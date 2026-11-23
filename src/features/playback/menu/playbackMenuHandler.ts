@@ -1,4 +1,5 @@
 import type { ChannelRow } from '@/core/db/types';
+import type { PlaybackRecording } from '@/features/recording';
 import type { ChannelBlocker } from '../gate/channelBlocker';
 import { DISMISS, type PlaybackCommands, show } from '../overlay/playbackCommands';
 import { afterAction, type PlaybackOverlay } from '../overlay/playbackOverlay';
@@ -26,6 +27,8 @@ export interface MenuHandlerDeps {
   commands: PlaybackCommands;
   tuner: Pick<TuneController, 'byId' | 'current' | 'zapAwayFrom'>;
   nav: MenuNavigation;
+  /** The DVR rows (Record / Custom recording) act through the host's recording adapter; absent (tests): placeholder. */
+  record?: Pick<PlaybackRecording, 'onRecord' | 'onCustomRecording'> | undefined;
 }
 
 /**
@@ -100,6 +103,9 @@ export class PlaybackMenuHandler {
     if (route === 'ToggleBlock')
       return this.show({ kind: 'BlockPin', channel, mode: this.deps.blocker.mode(), back });
     if (route === 'Description') return this.show({ kind: 'Description', channel, back });
+    const { record } = this.deps;
+    if (route === 'Record' && record !== undefined) return record.onRecord(channel);
+    if (route === 'CustomRecording' && record !== undefined) return record.onCustomRecording(channel);
     this.show({ kind: 'ComingSoon', feature: item, back });
   }
 

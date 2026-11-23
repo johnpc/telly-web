@@ -8,10 +8,14 @@ import { GuideScreen } from '@/features/guide/GuideScreen';
 import { ManageFavoritesScreen, ReorderChannelsScreen } from '@/features/groups/ChannelEditHostScreen';
 import { PlaybackScreen } from '@/features/playback/PlaybackScreen';
 import { MyListScreen } from '@/features/mylist/MyListScreen';
+import { MultiviewScreen } from '@/features/multiview/MultiviewScreen';
 import { AddPlaylistWizardScreen } from '@/features/onboarding/AddPlaylistWizardScreen';
 import { WelcomeScreen } from '@/features/onboarding/WelcomeScreen';
+import { RecordingsScreen } from '@/features/recording/RecordingsScreen';
 import { SearchScreen } from '@/features/search/SearchScreen';
 import { SettingsScreen } from '@/features/settings/SettingsScreen';
+import { VodPlaybackScreen } from '@/features/vod/VodPlaybackScreen';
+import { VodScreen } from '@/features/vod/VodScreen';
 
 type ScreenFactory = (route: Route) => JSX.Element;
 
@@ -27,6 +31,7 @@ const SCREENS: Partial<Record<RouteKind, ScreenFactory>> = {
   AddPlaylistWizard: () => <AddPlaylistWizardScreen />,
   Search: () => <SearchScreen />,
   MyList: () => <MyListScreen />,
+  Multiview: () => <MultiviewScreen />,
   Settings: () => <SettingsScreen />,
   Guide: () => <GuideScreen />,
   ManageFavorites: () => <ManageFavoritesScreen />,
@@ -34,6 +39,9 @@ const SCREENS: Partial<Record<RouteKind, ScreenFactory>> = {
     <ReorderChannelsScreen group={route.kind === 'ReorderChannels' ? route.group : ''} />
   ),
   ChannelNamesEditor: () => <ChannelNamesEditorScreen />,
+  Recordings: () => <RecordingsScreen />,
+  Vod: () => <VodScreen />,
+  VodPlayback: (route) => <VodPlaybackScreen itemKey={route.kind === 'VodPlayback' ? route.itemKey : ''} />,
 };
 
 export function screenFor(route: Route): JSX.Element {

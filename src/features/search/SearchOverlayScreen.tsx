@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import { Focusable } from '@/core/focus/Focusable';
 import { FocusScope } from '@/core/focus/FocusScope';
+import { CustomRecordingFormScreen, searchRecordingFor } from '@/features/recording';
 import { menuRowId } from './searchIds';
 import {
   SEARCH_PROGRAM_ACTIONS,
@@ -33,6 +34,8 @@ export function SearchOverlayScreen({
   };
   if (overlay.kind === 'ProgramMenu')
     return <SearchDropdownScreen hit={overlay.hit} overlays={overlays} close={close} />;
+  if (overlay.kind === 'CustomRecording')
+    return <CustomRecordingFormScreen menu={searchRecordingFor(overlays).menu} onBack={close} />;
   if (overlay.kind === 'ComingSoon') {
     return (
       <FocusScope id="search-coming-soon" trap onBack={close}>

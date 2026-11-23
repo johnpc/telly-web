@@ -2,6 +2,7 @@ import type { ChannelRow } from '@/core/db/types';
 import type { ParentalControls } from '@/core/settings/parentalControls';
 import type { SettingsRepository } from '@/core/settings/settingsRepository';
 import { TellySettings } from '@/core/settings/tellySettings';
+import { type PlaybackRecording, createPlaybackRecording } from '@/features/recording';
 import type { BlockGate } from './gate/blockGate';
 import { ChannelBlocker } from './gate/channelBlocker';
 import type { PlaybackNavigation } from './menu/menuNavigation';
@@ -71,12 +72,27 @@ export function buildMenu(
   commands: PlaybackCommands,
   tuner: TuneController,
   nav: PlaybackNavigation,
-): PlaybackMenuHandler {
-  return new PlaybackMenuHandler({
+): { menu: PlaybackMenuHandler; record: PlaybackRecording } {
+  const record = buildRecording(commands, tuner);
+  const menu = new PlaybackMenuHandler({
     actions,
     blocker: new ChannelBlocker(actions, parental),
     commands,
     tuner,
     nav,
+    record,
+  });
+  return { menu, record };
+}
+
+/** The DVR adapter: prompts become overlays through the one command executor. */
+export function buildRecording(
+  commands: PlaybackCommands,
+  tuner: Pick<TuneController, 'current'>,
+): PlaybackRecording {
+  return createPlaybackRecording({
+    show: (overlay) => commands.execute({ kind: 'Show', overlay }),
+    overlay: () => commands.overlay,
+    current: () => tuner.current,
   });
 }

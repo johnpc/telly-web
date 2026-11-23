@@ -1,5 +1,6 @@
 import type { ChannelRow } from '@/core/db/types';
 import { TellySettings } from '@/core/settings/tellySettings';
+import { GuideCatchup } from '@/features/catchup';
 import { LAST_CHANNEL_KEY } from '@/features/playback/tune';
 import { activate } from './guideActivation';
 import type { GuideController } from './guideController';
@@ -47,14 +48,18 @@ export function playChannel(deps: GuideControllerDeps, channel: ChannelRow): voi
   deps.onFullscreen();
 }
 
-/** Regular OK: play the focused row's channel fullscreen, or a playable past cell's archive. */
+/**
+ * Regular OK: play the focused row's channel fullscreen, or hand a playable
+ * past cell's archive to the catch-up session, which the playback screen
+ * consumes instead of tuning live (Android `GuideCatchup.play`).
+ */
 export function activateFocused(controller: GuideController, deps: GuideControllerDeps): void {
   const focus = controller.engine.focus;
   const row = controller.focusedRow();
   if (focus === null || row === undefined) return;
   const action = activate(row, focus.cell, controller.now);
-  deps.tuner.tune(action.channel, action.kind === 'PlayCatchup' ? { catchupUrl: action.url } : {});
-  deps.onFullscreen();
+  if (action.kind === 'PlayCatchup') return GuideCatchup.play(action.request, deps.onFullscreen);
+  playChannel(deps, action.channel);
 }
 
 /** The Block/Unblock or locked-group PIN dialog's submit; a wrong PIN keeps the dialog up. */

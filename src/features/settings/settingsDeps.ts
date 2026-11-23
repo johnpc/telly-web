@@ -9,6 +9,7 @@ import { ParentalControls } from '@/core/settings/parentalControls';
 import type { SettingsRepository } from '@/core/settings/settingsRepository';
 import { TellySettings } from '@/core/settings/tellySettings';
 import { createEpgRefresher } from '@/features/epg/epgWiring';
+import { deleteAllRecordings } from '@/features/recording';
 import { defaultRefreshDeps, tryUpdatePlaylist } from '@/features/playlist/playlistRefresh';
 import { SettingsBackupManager } from './backup/settingsBackup';
 import { changePlaylistUrl } from './playlistUrlChanger';
@@ -33,6 +34,8 @@ export interface SettingsDeps {
   channels: ChannelRepository;
   vod: VodRepository;
   recordings: RecordingRepository;
+  /** "Delete all recordings": stops live captures and drops rows + OPFS files (DVR slice); rows only when absent. */
+  deleteAllRecordings?: () => Promise<void>;
   backup: SettingsBackupManager;
   /** "Update playlist": true when fetched and re-imported. */
   updatePlaylist: (url: string) => Promise<boolean>;
@@ -74,6 +77,7 @@ export function defaultSettingsDeps(
     channels: channelRepository,
     vod: vodRepository,
     recordings: recordingRepository,
+    deleteAllRecordings,
     backup: new SettingsBackupManager(settings, playlistRepository),
     updatePlaylist: (url) => tryUpdatePlaylist(url, refreshDeps()),
     updateEpgNow: async () => (await createEpgRefresher(settings).refreshAllNow()).length,

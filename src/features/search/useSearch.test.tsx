@@ -202,7 +202,7 @@ describe('SearchScreen', () => {
     console.info('DROPDOWN2', again.textContent, document.activeElement?.getAttribute('data-focus-id'));
     expect(await screen.findByText('Remove reminder')).toBeInTheDocument();
     await act(async () => {
-      focusEngine.focus(menuRowId('Record'));
+      focusEngine.focus(menuRowId('Program description'));
     });
     press('Enter');
     expect(await screen.findByText('Coming soon to telly')).toBeInTheDocument();

@@ -11,15 +11,18 @@ export type PlayerMenuRoute =
   | 'ExternalPlayer'
   | 'ManageFavorites'
   | 'ReorderChannels'
-  /** Slices not yet ported on the web (recording, My list, channel options, group tools). */
+  /** DVR: instant record (or Stop confirm) / the custom-recording form. */
+  | 'Record'
+  | 'CustomRecording'
+  /** Slices not yet ported on the web (My list, channel options, group tools). */
   | 'ComingSoon';
 
 const ROUTES: Readonly<Record<PlayerMenuItem, PlayerMenuRoute>> = {
   Search: 'Search',
   Settings: 'Settings',
   'Open in external player': 'ExternalPlayer',
-  Record: 'ComingSoon',
-  'Custom recording': 'ComingSoon',
+  Record: 'Record',
+  'Custom recording': 'CustomRecording',
   'Add to My list': 'ComingSoon',
   'Program description': 'Description',
   'Add to Favorites': 'ToggleFavorite',
@@ -42,7 +45,12 @@ export function routeOf(item: PlayerMenuItem): PlayerMenuRoute {
 }
 
 /** Routes that push a screen whose BACK pops back to the sheet. */
-const PUSHED: ReadonlySet<PlayerMenuRoute> = new Set(['Description', 'ToggleBlock', 'ComingSoon']);
+const PUSHED: ReadonlySet<PlayerMenuRoute> = new Set([
+  'Description',
+  'ToggleBlock',
+  'ComingSoon',
+  'CustomRecording',
+]);
 
 /**
  * Focus memory of the sheet: a row that pushes a screen over the sheet

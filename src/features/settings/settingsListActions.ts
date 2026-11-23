@@ -40,9 +40,9 @@ export async function confirmClearVodPositions(c: SettingsController): Promise<v
   await c.deps.vod.clearPositions();
 }
 
-/** OK on Delete in the "Delete all recordings?" confirm. */
+/** OK on Delete in the "Delete all recordings?" confirm: live captures stop, rows and OPFS files go. */
 export async function confirmDeleteRecordings(c: SettingsController): Promise<void> {
   if (c.state.overlay?.kind !== 'ConfirmDeleteRecordings') return;
   c.dismissOverlay();
-  await c.deps.recordings.removeAll();
+  await (c.deps.deleteAllRecordings ?? (() => c.deps.recordings.removeAll()))();
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { TellySettings } from '@/core/settings/tellySettings';
+import { catchupSession } from '@/features/catchup';
 import { LAST_CHANNEL_KEY } from '@/features/playback/tune';
 import { activateFocused } from './guideControllerFlows';
 import { GRID, GROUPS } from './guideLayer';
@@ -94,7 +95,9 @@ describe('GuideController', () => {
       firstRow: 0,
     });
     activateFocused(controller, harness.deps);
-    expect(engine.load).toHaveBeenLastCalledWith(expect.stringContaining('utc='), { live: false });
+    // The archive is parked for the playback screen; the preview keeps the live stream.
+    expect(catchupSession.consume()?.url).toContain('utc=');
+    expect(engine.load).toHaveBeenCalledTimes(1);
     controller.engine.reset();
     activateFocused(controller, harness.deps);
     expect(fullscreen).toHaveBeenCalledTimes(2);

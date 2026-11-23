@@ -15,6 +15,8 @@ import {
 export type PlaybackCommand =
   | { kind: 'ShowInfo' }
   | { kind: 'ShowTransport' }
+  /** Catch-up pause: the transport stays up (sticky) until resume re-arms its auto-hide. */
+  | { kind: 'PinTransport' }
   | { kind: 'ExitToGuide' }
   | { kind: 'Zap'; delta: number }
   | { kind: 'OpenQuickBar' }
@@ -31,6 +33,7 @@ export type PlaybackCommand =
 
 export const SHOW_INFO: PlaybackCommand = { kind: 'ShowInfo' };
 export const SHOW_TRANSPORT: PlaybackCommand = { kind: 'ShowTransport' };
+export const PIN_TRANSPORT: PlaybackCommand = { kind: 'PinTransport' };
 export const EXIT_TO_GUIDE: PlaybackCommand = { kind: 'ExitToGuide' };
 export const OPEN_QUICK_BAR: PlaybackCommand = { kind: 'OpenQuickBar' };
 export const DISMISS: PlaybackCommand = { kind: 'Dismiss' };
@@ -77,6 +80,8 @@ export class PlaybackCommands {
         return this.showInfo();
       case 'ShowTransport':
         return this.overlays.showAutoHiding(INFO_TRANSPORT, this.seams.timeouts().infoMs);
+      case 'PinTransport':
+        return this.overlays.set(INFO_TRANSPORT);
       case 'ExitToGuide':
         return this.seams.exitToGuide();
       case 'Zap':

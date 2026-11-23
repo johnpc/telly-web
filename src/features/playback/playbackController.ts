@@ -1,9 +1,11 @@
 import type { ChannelRow } from '@/core/db/types';
-import type { RemoteKey } from '@/core/input/remoteKeys';
+import type { RemoteKey, SimpleRemoteKey } from '@/core/input/remoteKeys';
 import type { PlayerEngine } from '@/core/player';
 import type { ParentalControls } from '@/core/settings/parentalControls';
 import type { SettingsRepository } from '@/core/settings/settingsRepository';
+import { type CatchupPlayback, createCatchupPlayback } from '@/features/catchup';
 import type { PipState } from '@/features/pip/pipState';
+import type { PlaybackRecording } from '@/features/recording';
 import type { BlockGate } from './gate/blockGate';
 import { TuneBlockPrompt } from './gate/tuneBlockPrompt';
 import { PlaybackLifecycle } from './lifecycle/playbackLifecycle';
@@ -12,6 +14,7 @@ import type { PlaybackNavigation } from './menu/menuNavigation';
 import type { FlagActions, PlaybackMenuHandler } from './menu/playbackMenuHandler';
 import { OverlayState, type OverlayTimers } from './overlay/overlayState';
 import type { PlaybackCommands } from './overlay/playbackCommands';
+import type { PlaybackOverlay } from './overlay/playbackOverlay';
 import { playerKeymapOf } from './overlay/playerKeymap';
 import { InstantStore, Signal } from './overlay/signal';
 import { afterTune, buildCommands, buildMenu, buildNumberEntry, panelTuner } from './playbackControllerParts';
@@ -30,6 +33,8 @@ export interface ControllerDeps {
   actions?: FlagActions;
   timers?: OverlayTimers;
   clock?: () => number;
+  /** Test seam: the catch-up mode to use instead of the production wiring. */
+  catchup?: CatchupPlayback;
 }
 
 /** The fullscreen-playback state machine's parts, assembled once per screen mount (Android `PlaybackViewModel`). */
@@ -44,6 +49,9 @@ export interface PlaybackController {
   /** Bumped after an engine write the engine does not announce itself (audio sync). */
   readonly tracksChanged: Signal;
   readonly nav: PlaybackNavigation;
+  /** Catch-up playback mode (seek keys, transport, archive end → live). */
+  readonly catchup: CatchupPlayback;
+  readonly record: PlaybackRecording;
   onKey(key: RemoteKey): boolean;
   /** OK on a recent card / number entry: tune and show the compact zap overlay (a gated tune prompts instead). */
   tuneFromPanel(channel: ChannelRow): void;
@@ -59,12 +67,23 @@ export function createPlaybackController(deps: ControllerDeps): PlaybackControll
   const commands = buildCommands(tuner, overlays, instant, nav, settings);
   const tuneFromPanel = panelTuner(tuner, gate, commands);
   const entry = buildNumberEntry(tuner, tuneFromPanel, deps.timers);
-  const menu = buildMenu(deps.actions ?? channelActions, deps.parental, commands, tuner, nav);
+  const { menu, record } = buildMenu(deps.actions ?? channelActions, deps.parental, commands, tuner, nav);
+  const catchup =
+    deps.catchup ??
+    createCatchupPlayback({
+      engine: deps.engine,
+      tuner,
+      commands,
+      exitToGuide: () => nav.exitToGuide(),
+      settings,
+      clock: deps.clock ?? Date.now,
+    });
   const keys = {
     commands,
     entry,
     keymap: () => playerKeymapOf(settings),
     promptOpen: () => gate.prompt !== null,
+    preempt: (overlay: PlaybackOverlay, key: SimpleRemoteKey) => catchup.onKey(overlay, key),
   };
   return {
     overlays,
@@ -80,6 +99,8 @@ export function createPlaybackController(deps: ControllerDeps): PlaybackControll
     instant,
     tracksChanged: new Signal(),
     nav,
+    catchup,
+    record,
     onKey: (key) => routeKey(keys, key),
     tuneFromPanel,
     onPanelTuned: afterTune(gate, commands),

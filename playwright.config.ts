@@ -34,7 +34,8 @@ export default defineConfig({
     trace: 'retain-on-failure',
     launchOptions: { args: ['--autoplay-policy=no-user-gesture-required'] },
   },
-  projects: [{ name: 'tv', use: { ...devices['Desktop Chrome'] } }],
+  // The device preset carries its own 1280×720 viewport; the TV viewport must win.
+  projects: [{ name: 'tv', use: { ...devices['Desktop Chrome'], viewport: { width: 1920, height: 1080 } } }],
   webServer: [
     {
       command: 'npm run fixtures && npm run fixtures:serve',

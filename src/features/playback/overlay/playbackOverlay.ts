@@ -30,7 +30,11 @@ export type PlaybackOverlay =
   /** The sheet's Block/Unblock PIN dialog; BACK cancels back to the sheet. */
   | { kind: 'BlockPin'; channel: ChannelRow; mode: BlockPinMode; back: PlaybackOverlay }
   /** Quick-bar track picker dialog (video / audio / audio-sync / CC). Sticky. */
-  | { kind: 'TrackPicker'; picker: TrackPickerKind; back: PlaybackOverlay };
+  | { kind: 'TrackPicker'; picker: TrackPickerKind; back: PlaybackOverlay }
+  /** DVR: "Stop recording?" behind a second Record on a channel already being captured. */
+  | { kind: 'RecordingStop'; recordingId: number; channelName: string; back: PlaybackOverlay }
+  /** DVR: the sheet's "Custom recording" form; BACK pops back to the sheet. */
+  | { kind: 'CustomRecording'; back: PlaybackOverlay };
 
 export type PushedOverlay = Extract<PlaybackOverlay, { back: PlaybackOverlay }>;
 

@@ -2,6 +2,7 @@ import type { ChannelRow } from '@/core/db/types';
 import type { Route } from '@/core/navigation/routes';
 import type { CustomGroup } from '@/features/groups/customGroups';
 import type { GroupTools } from '@/features/groups/groupTools';
+import type { GuideRecording } from '@/features/recording';
 import type { ChannelOptionsController } from './channelOptionsController';
 import { openGroupTool } from './guideGroupTools';
 import type { GuideInfoData } from './guideInfoBuilder';
@@ -22,6 +23,8 @@ export interface SheetActionDeps {
   open: (route: Route) => void;
   toggleMyList: (channel: ChannelRow) => void;
   openExternal: (channel: ChannelRow) => void;
+  /** The DVR rows (Record / Custom recording) act through the guide's recording adapter. */
+  recording: Pick<GuideRecording, 'record' | 'customRecording'>;
 }
 
 /** Rows that act and land back on the grid (round3-ref 05). */
@@ -52,8 +55,7 @@ function pushRoute(deps: SheetActionDeps, item: SheetItem): boolean {
 
 /**
  * The sheet's row dispatch (Android `GuideMenuController.onMenuItem`): every
- * row is live except Record / Custom recording, which open the branded
- * coming-soon placeholder until the recording slice lands.
+ * row is live; Record / Custom recording act through the DVR adapter.
  */
 export function onSheetItem(deps: SheetActionDeps, item: SheetItem, channel: ChannelRow): void {
   const { menu } = deps;
@@ -62,6 +64,8 @@ export function onSheetItem(deps: SheetActionDeps, item: SheetItem, channel: Cha
     menu.show({ kind: 'BlockPin', channelId: channel.id, mode: deps.actions.blockMode(), back: menu.layer });
   else if (item === 'Program description') menu.show(descriptionLayer(deps.info()));
   else if (item === 'Channel options') menu.show({ kind: 'ChannelOptions', channelId: channel.id });
+  else if (item === 'Record') deps.recording.record(channel);
+  else if (item === 'Custom recording') deps.recording.customRecording(channel);
   else if (GROUP_TOOL_ITEMS.has(item)) {
     openGroupTool(menu, deps.groupTools, item, channel, deps.selectedGroup(), deps.customGroups());
   } else menu.comingSoon(item, menu.layer);

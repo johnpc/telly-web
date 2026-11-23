@@ -33,8 +33,8 @@ export type RemotePress =
   | 'PageUp'
   | 'PageDown'
   | 'ContextMenu'
-  | 'MediaRewind'
-  | 'MediaFastForward'
+  | 'MediaTrackPrevious'
+  | 'MediaTrackNext'
   | 'MediaPlayPause';
 
 /** The start route has resolved: keys pressed before this would hit the bare Boot frame. */
@@ -80,7 +80,12 @@ export const test = base.extend<{ world: TellyWorld }>({
       },
       async focus(text, within) {
         const scope = within ? page.getByTestId(within) : page;
-        const node = scope.locator('[data-focus-id]').filter({ hasText: text }).first();
+        // Visible text or, for icon-only controls (rail icons, trash cans), the aria-label.
+        // An exact `data-channel-name` wins over substring text ("News One" vs "News One HD").
+        const byName = scope.locator(`[data-focus-id][data-channel-name="${text}"]`);
+        const byText = scope.locator('[data-focus-id]').filter({ hasText: text });
+        const byLabel = scope.locator(`[data-focus-id][aria-label="${text}"]`);
+        const node = ((await byName.count()) > 0 ? byName : byText.or(byLabel)).first();
         await expect(node).toBeVisible();
         await node.evaluate((el) => (el as HTMLElement).focus());
         await expect(node).toBeFocused();

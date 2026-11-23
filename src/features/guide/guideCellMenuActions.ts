@@ -1,4 +1,5 @@
 import type { ChannelRow, ProgramRow } from '@/core/db/types';
+import type { GuideRecording } from '@/features/recording';
 import type { GuideMenuController } from './guideMenuController';
 import type { GuideCellAction, GuideRow } from './guideModel';
 
@@ -9,6 +10,9 @@ export interface CellActionDeps {
   playChannel: (channel: ChannelRow) => void;
   toggleReminder: (channel: ChannelRow, program: ProgramRow) => void;
   toggleMyList: (channel: ChannelRow, program: ProgramRow) => void;
+  /** Record schedules the focused cell's slot (instant when airing); Custom recording opens the form. Absent (tests): placeholder. */
+  recording?: Pick<GuideRecording, 'recordCell' | 'customRecording'>;
+  now?: () => number;
 }
 
 type Toggle = (channel: ChannelRow, program: ProgramRow) => void;
@@ -38,11 +42,24 @@ function toggleFor(deps: CellActionDeps, action: GuideCellAction): Toggle | null
 /**
  * The long-OK cell dropdown's row dispatch (Android `onCellAction`): Play
  * channel tunes + goes fullscreen, Remind toggles a reminder, "Add to My
- * list" toggles the cell's programme; every other row (Record, Custom
- * recording, Program description) opens the branded coming-soon placeholder.
+ * list" toggles the cell's programme, Record / Custom recording act through
+ * the DVR adapter; Program description opens the branded coming-soon placeholder.
  */
 export function onCellAction(deps: CellActionDeps, action: GuideCellAction): void {
   if (action === 'Play channel') return playFocused(deps);
+  if (action === 'Record' || action === 'Custom recording') return recordFocused(deps, action);
   const toggle = toggleFor(deps, action);
   if (toggle === null || !toggleFocused(deps, toggle)) deps.menu.comingSoon(action);
+}
+
+/** The DVR rows on the focused cell; a vanished row falls back to the placeholder. */
+function recordFocused(deps: CellActionDeps, action: 'Record' | 'Custom recording'): void {
+  const layer = deps.menu.layer;
+  const row = deps.focusedRow();
+  const recording = deps.recording;
+  if (layer.kind !== 'CellMenu' || row === undefined || recording === undefined) {
+    return deps.menu.comingSoon(action);
+  }
+  if (action === 'Record') recording.recordCell(row.channel, layer.cell, (deps.now ?? Date.now)());
+  else recording.customRecording(row.channel);
 }

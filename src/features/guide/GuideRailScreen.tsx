@@ -98,6 +98,7 @@ export function GuideRailScreen({ controller, groupsFocusId }: RailProps): JSX.E
             onClick={target.onClick}
           >
             <target.icon />
+            <span className="sr-only">{target.label}</span>
           </Focusable>
         );
       })}

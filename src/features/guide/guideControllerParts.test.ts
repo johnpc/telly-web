@@ -64,8 +64,9 @@ describe('guideControllerParts: sheet rows', () => {
     parts.onSheetItem('Create group');
     expect(h.controller.layer.kind).toBe('GroupTool');
     h.controller.menu.show(ROW_MENU);
-    parts.onSheetItem('Record');
-    expect(h.controller.layer).toMatchObject({ kind: 'ComingSoon', feature: 'Record', back: ROW_MENU });
+    parts.onSheetItem('Custom recording');
+    expect(h.controller.layer).toMatchObject({ kind: 'CustomRecording', back: ROW_MENU });
+    expect(parts.recording.menu.form?.channel.id).toBe(h.rows[0]?.channel.id);
     h.controller.engine.reset();
     parts.onSheetItem('Search');
     expect(h.opened).toEqual([]);

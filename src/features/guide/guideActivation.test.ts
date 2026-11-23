@@ -18,11 +18,17 @@ describe('guideActivation', () => {
   });
   it('resolves OK to PlayCatchup with the built URL, else PlayChannel', () => {
     const r = row(catchup, ORIGIN, 1);
-    expect(activate(r, past, ORIGIN)).toEqual({
-      kind: 'PlayCatchup',
-      channel: catchup,
-      url: `http://a/${(ORIGIN - 2 * HOUR) / 1000}`,
-    });
+    const action = activate(r, past, ORIGIN);
+    expect(action.kind).toBe('PlayCatchup');
+    if (action.kind === 'PlayCatchup') {
+      expect(action.channel).toBe(catchup);
+      expect(action.request).toMatchObject({
+        channel: catchup,
+        url: `http://a/${(ORIGIN - 2 * HOUR) / 1000}`,
+        startMs: past.startMs,
+        endMs: past.endMs,
+      });
+    }
     expect(activate(r, cell(ORIGIN, ORIGIN + HOUR), ORIGIN)).toEqual({
       kind: 'PlayChannel',
       channel: catchup,

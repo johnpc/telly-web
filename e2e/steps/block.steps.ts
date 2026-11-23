@@ -53,7 +53,14 @@ Given(
       name,
     );
     await world.relaunch();
-    await expect(page.getByTestId('playback-screen')).toHaveAttribute('data-channel-number', /\d+/);
+    // Playback is up when a channel is tuned OR, when the blocked channel was the last-watched
+    // one, when its PIN prompt gates the restore tune (Android's gate fires first, too).
+    await expect(
+      page
+        .getByTestId('playback-screen')
+        .and(page.locator('[data-channel-number]'))
+        .or(page.getByTestId('pin-prompt')),
+    ).toBeVisible();
   },
 );
 

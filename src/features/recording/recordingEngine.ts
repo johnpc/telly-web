@@ -1,0 +1,124 @@
+import type { RecordingRow } from '@/core/db/types';
+import { runAttempts } from './captureAttempts';
+import { type Capture, countingSink, defaultFetch } from './captureContext';
+import type { RecordingFiles } from './recordingFiles';
+import type { RecordingStore } from './recordingStore';
+import { complete, fail, markStarted } from './recordingStoreTransitions';
+import { type FetchLike, type StreamRecorder, recordStream } from './streamRecorder';
+
+export interface RecordingEngineDeps {
+  store: RecordingStore;
+  files: RecordingFiles;
+  clock: () => number;
+  recorder?: StreamRecorder;
+  fetch?: FetchLike;
+  /** Pause between copy attempts (a live source dropped and may resume). */
+  retryDelayMs?: number;
+  /** How often the growing `sizeBytes` is written back to the row. */
+  sizeUpdateMs?: number;
+}
+
+/**
+ * Runs the actual captures (Android `RecordingEngine`): one copy loop per
+ * active recording, re-connecting when a live source drops, finishing the
+ * row as DONE (planned end reached or user stop) or FAILED (three attempts
+ * in a row wrote nothing, or a fetch error with nothing on disk). The
+ * injected clock is the only time source.
+ */
+export class RecordingEngine {
+  private readonly active = new Map<number, Capture>();
+
+  constructor(private readonly deps: RecordingEngineDeps) {}
+
+  isActive(id: number): boolean {
+    return this.active.has(id);
+  }
+
+  /** Begins capturing `row` (idempotent per row id). */
+  start(row: RecordingRow): void {
+    if (this.active.has(row.id)) return;
+    const capture: Capture = {
+      id: row.id,
+      plannedEndMs: row.plannedEndMs,
+      controller: new AbortController(),
+      stopped: false,
+      bytes: 0,
+      done: Promise.resolve(),
+    };
+    this.active.set(row.id, capture);
+    capture.done = this.run(row, capture).finally(() => this.active.delete(row.id));
+  }
+
+  /** User stop: ends the copy loop and waits for the row to finalize. */
+  async stop(id: number): Promise<void> {
+    const capture = this.active.get(id);
+    if (capture === undefined) return;
+    capture.stopped = true;
+    capture.controller.abort();
+    await capture.done;
+  }
+
+  /** Resolves once `id` is no longer being written (immediately when it is not active). */
+  whenSettled(id: number): Promise<void> {
+    return this.active.get(id)?.done ?? Promise.resolve();
+  }
+
+  /** App start: rows stuck RECORDING from a closed tab finalize now. */
+  async recoverStale(): Promise<void> {
+    for (const row of await this.deps.store.allRecording()) {
+      if (!this.active.has(row.id)) await this.finish(row);
+    }
+  }
+
+  private async run(row: RecordingRow, capture: Capture): Promise<void> {
+    // A row cancelled or deleted between the scheduler's sweep and this
+    // launch is no longer SCHEDULED: nothing to record, nothing to finish.
+    if (!(await markStarted(this.deps.store, row.id))) return;
+    const endTimer = setTimeout(
+      () => capture.controller.abort(),
+      Math.max(0, row.plannedEndMs - this.deps.clock()),
+    );
+    try {
+      await this.copyLoop(row, capture);
+    } catch (error: unknown) {
+      // No OPFS (or the file could not be opened): the row fails from what is on disk.
+      this.warn(row, capture, error);
+    } finally {
+      clearTimeout(endTimer);
+      await this.finish(row);
+    }
+  }
+
+  /** Opens the capture file, runs the attempts, and closes the file whatever happened. */
+  private async copyLoop(row: RecordingRow, capture: Capture): Promise<void> {
+    const { store, clock } = this.deps;
+    const writable = await this.deps.files.open(row.filePath);
+    const report = (bytes: number): void => void store.updateSize(row.id, bytes);
+    const sink = countingSink(capture, writable, report, clock, this.deps.sizeUpdateMs ?? 1_000);
+    try {
+      await runAttempts(row.streamUrl, capture, sink, {
+        clock,
+        fetch: this.deps.fetch ?? defaultFetch,
+        recorder: this.deps.recorder ?? recordStream,
+        retryDelayMs: this.deps.retryDelayMs ?? 1_000,
+        onError: (error) => this.warn(row, capture, error),
+      });
+    } finally {
+      await writable.close();
+    }
+  }
+
+  /** A stop-aborted fetch ends the attempt normally; anything else is logged with its message. */
+  private warn(row: RecordingRow, capture: Capture, error: unknown): void {
+    if (capture.controller.signal.aborted) return;
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`recording ${row.id} (${row.channelName}) attempt failed: ${message}`);
+  }
+
+  /** DONE when bytes landed on disk, FAILED otherwise. */
+  private async finish(row: RecordingRow): Promise<void> {
+    const size = await this.deps.files.sizeOf(row.filePath);
+    if (size > 0) await complete(this.deps.store, row.id, size);
+    else await fail(this.deps.store, row.id, size);
+  }
+}

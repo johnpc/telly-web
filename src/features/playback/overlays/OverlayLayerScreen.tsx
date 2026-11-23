@@ -1,5 +1,6 @@
 import type { JSX } from 'react';
 import { watchHistoryRepository } from '@/core/db/watchHistoryRepository';
+import { CatchupTicker, useTransportCatchup } from '@/features/catchup';
 import { InfoOverlay } from '../info/InfoOverlayScreen';
 import { KEEP_ALIVE, show } from '../overlay/playbackCommands';
 import type { PlaybackController } from '../playbackController';
@@ -18,28 +19,35 @@ interface LayerProps {
   session: PlaybackSession;
 }
 
-function InfoLayer({ view, ctl }: Omit<LayerProps, 'session'>): JSX.Element | null {
+function InfoLayer({ view, ctl, session }: LayerProps): JSX.Element | null {
+  const catchup = useTransportCatchup(ctl.catchup, session.engine);
   if (view.info === null) return null;
+  const transport = view.overlay.kind === 'InfoTransport';
   return (
-    <InfoOverlay
-      data={view.info}
-      recents={view.recents}
-      style={view.panelStyle}
-      transport={view.overlay.kind === 'InfoTransport'}
-      actions={{
-        onGuide: () => ctl.nav.exitToGuide(),
-        onHistory: () => ctl.nav.openHistory(),
-        onMultiview: () => ctl.nav.openMultiview(),
-        onRecent: (card) => ctl.tuneFromPanel(card.channel),
-        onClear: () => {
-          void watchHistoryRepository.clear();
-          ctl.commands.execute(KEEP_ALIVE);
-        },
-      }}
-      onFeature={(feature) =>
-        ctl.commands.execute(show({ kind: 'ComingSoon', feature, back: { kind: 'None' } }))
-      }
-    />
+    <>
+      <InfoOverlay
+        data={view.info}
+        recents={view.recents}
+        style={view.panelStyle}
+        transport={transport}
+        catchup={catchup}
+        actions={{
+          onGuide: () => ctl.nav.exitToGuide(),
+          onHistory: () => ctl.nav.openHistory(),
+          onMultiview: () => ctl.nav.openMultiview(),
+          onRecent: (card) => ctl.tuneFromPanel(card.channel),
+          onClear: () => {
+            void watchHistoryRepository.clear();
+            ctl.commands.execute(KEEP_ALIVE);
+          },
+        }}
+        onFeature={(feature) => {
+          if (feature === 'Record') return ctl.record.toggle();
+          ctl.commands.execute(show({ kind: 'ComingSoon', feature, back: { kind: 'None' } }));
+        }}
+      />
+      {catchup !== null && <CatchupTicker catchup={ctl.catchup} transport={transport} />}
+    </>
   );
 }
 
@@ -64,7 +72,7 @@ export function OverlayLayer({ view, ctl, session }: LayerProps): JSX.Element | 
   switch (view.overlay.kind) {
     case 'Info':
     case 'InfoTransport':
-      return <InfoLayer view={view} ctl={ctl} />;
+      return <InfoLayer view={view} ctl={ctl} session={session} />;
     case 'ZapInfo':
       return view.info === null ? null : <ZapOverlay data={view.info} style={view.panelStyle} />;
     case 'Panel':

@@ -66,7 +66,7 @@ function useLockedGroups(groups: readonly string[]): ReadonlySet<string> {
 
 /** Groups + rows of `selectedGroup` with now/next (Android `PanelViewModel.groups`/`rows`). "Now" is sampled when the panel opens. */
 export function usePanelModel(
-  session: PlaybackSession,
+  session: Pick<PlaybackSession, 'channels'>,
   selectedGroup: string,
   deps: PanelDeps = panelDeps,
 ): PanelModel {

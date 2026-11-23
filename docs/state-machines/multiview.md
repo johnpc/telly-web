@@ -1,0 +1,5 @@
+# Multiview
+
+| Machine   | States                                                                                                                 | Owner                                                                                                                                                   | Status   | Tests                                               |
+| --------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | --------------------------------------------------- |
+| Multiview | `MultiviewLayer` Panes · Menu · Picker(mode) + PIN card over any (a gated pane action is stashed for the verified PIN) | `src/features/multiview/multiviewLayer.ts`, `src/features/multiview/multiviewViewModel.ts` (sole writer), `src/features/multiview/multiviewTuneGate.ts` | explicit | `src/features/multiview/multiviewViewModel.test.ts` |

@@ -20,7 +20,11 @@ export type GuideLayer =
   | { kind: 'ChannelOptions'; channelId: number }
   | { kind: 'BlockPin'; channelId: number; mode: BlockPinMode; back: GuideLayer }
   | { kind: 'GroupPin'; group: string }
-  | { kind: 'GroupTool'; session: GroupToolSession };
+  | { kind: 'GroupTool'; session: GroupToolSession }
+  /** DVR: "Stop recording?" behind a second Record on a channel already being captured. */
+  | { kind: 'RecordingStop'; recordingId: number; channelName: string; back: GuideLayer }
+  /** DVR: the "Custom recording" form; BACK pops back to the sheet / dropdown's grid. */
+  | { kind: 'CustomRecording'; back: GuideLayer };
 
 export const GRID: GuideLayer = { kind: 'Grid' };
 export const GROUPS: GuideLayer = { kind: 'Groups' };
@@ -32,6 +36,8 @@ export function backOf(layer: GuideLayer): GuideLayer {
     case 'ComingSoon':
     case 'Description':
     case 'BlockPin':
+    case 'RecordingStop':
+    case 'CustomRecording':
       return layer.back;
     case 'GroupTool':
       return ROW_MENU;

@@ -1,5 +1,6 @@
 import { type EngineState, type StreamDetails, useEngineState } from '@/core/player';
 import type { ChannelRow } from '@/core/db/types';
+import { useCatchupInfo } from '@/features/catchup';
 import { playbackGate } from '../gate/playbackGate';
 import type { ClockStyle } from '../info/clockStyle';
 import type { PlaybackInfoData } from '../info/playbackInfo';
@@ -48,7 +49,7 @@ export function usePlaybackView(session: PlaybackSession, ctl: PlaybackControlle
     digits: useNumberDigits(ctl.entry),
     state: useEngineState(engine),
     panelStyle: usePanelStyle(),
-    info: usePlaybackInfo(channel, instant, details, clock),
+    info: useCatchupInfo(ctl.catchup, usePlaybackInfo(channel, instant, details, clock), clock),
     recents: useRecentCards(session.channels, channel?.id ?? null, instant, clock),
     source: useTrackSource(engine, details, ctl.tracksChanged),
   };

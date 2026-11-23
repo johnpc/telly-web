@@ -1,3 +1,4 @@
+import { type GuideRecording, createGuideRecording } from '@/features/recording';
 import { ChannelOptionsController } from './channelOptionsController';
 import { externalDefaultOf } from './channelOptionsValues';
 import { type CellActionDeps, onCellAction } from './guideCellMenuActions';
@@ -23,9 +24,11 @@ export interface GuideParts {
   onChannelOption(rowId: string): void;
   /** The Block/Unblock or locked-group PIN dialog's submit; a wrong PIN keeps the dialog up. */
   submitPin(pin: string): Promise<void>;
+  /** The DVR adapter the sheet / dropdown Record rows and the pushed DVR layers act through. */
+  recording: GuideRecording;
 }
 
-type Core = Pick<GuideParts, 'options' | 'actions' | 'info'>;
+type Core = Pick<GuideParts, 'options' | 'actions' | 'info' | 'recording'>;
 
 function sheetDeps(controller: GuideController, deps: GuideControllerDeps, core: Core): SheetActionDeps {
   return {
@@ -42,12 +45,15 @@ function sheetDeps(controller: GuideController, deps: GuideControllerDeps, core:
       if (program !== null) void deps.seams.toggleMyList(channel, program);
     },
     openExternal: deps.seams.openExternal,
+    recording: core.recording,
   };
 }
 
-function cellDeps(controller: GuideController, deps: GuideControllerDeps): CellActionDeps {
+function cellDeps(controller: GuideController, deps: GuideControllerDeps, core: Core): CellActionDeps {
   return {
     menu: controller.menu,
+    recording: core.recording,
+    now: deps.now,
     focusedRow: () => controller.focusedRow(),
     playChannel: (channel) => playChannel(deps, channel),
     toggleReminder: (channel, program) => void deps.seams.toggleReminder(channel, program),
@@ -81,14 +87,21 @@ export function buildParts(controller: GuideController, deps: GuideControllerDep
   );
   const info = (): GuideInfoData | null =>
     infoFor(controller.rows, controller.engine.focus, controller.now, clockStyleOf(deps));
-  const sheet = sheetDeps(controller, deps, { options, actions, info });
+  const recording = createGuideRecording({
+    show: (layer) => controller.menu.show(layer),
+    layer: () => controller.menu.layer,
+    clock: deps.now,
+  });
+  const core: Core = { options, actions, info, recording };
+  const sheet = sheetDeps(controller, deps, core);
   return {
     options,
     actions,
     info,
+    recording,
     clockStyle: () => clockStyleOf(deps),
     commands: commandDeps(controller, deps),
-    onCellAction: (action) => onCellAction(cellDeps(controller, deps), action),
+    onCellAction: (action) => onCellAction(cellDeps(controller, deps, core), action),
     ...rowHandlers(controller, deps, sheet),
     submitPin: (pin) => submitPin(controller, deps, actions, pin),
   };

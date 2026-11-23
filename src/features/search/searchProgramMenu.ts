@@ -1,10 +1,11 @@
 // The programme dropdown's live actions (guide-cell parity, port of Android
 // `SearchProgramMenu`): Remind toggles a reminder and relabels, Add to My list
 // toggles the programme, Program description stays on the branded placeholder
-// exactly like the guide's cell dropdown. Record / Custom recording push the
-// placeholder until the recording slice lands.
+// exactly like the guide's cell dropdown. Record / Custom recording act
+// through the DVR slice's search adapter (one per overlay stack).
 import type { ChannelRow, ProgramRow } from '@/core/db/types';
 import { isSavedInMyList, myListLabel, programmeOf, toggleMyList } from '@/features/mylist/myListToggle';
+import { searchRecordingFor } from '@/features/recording';
 import { reminderLabel, toggleReminder } from '@/features/reminders/guideReminders';
 import { type SearchOverlays, type SearchProgramAction } from './searchOverlay';
 import type { SearchProgramHit } from './searchResults';
@@ -47,6 +48,10 @@ export function runMenuAction(
       void hooks.toggleMyList(hit.channel, hit.program);
       overlays.dismiss();
       return;
+    case 'Record':
+      return searchRecordingFor(overlays).record(hit.channel, hit.program, Date.now());
+    case 'Custom recording':
+      return searchRecordingFor(overlays).customRecording(hit.channel);
     default:
       overlays.show({ kind: 'ComingSoon', feature: action });
   }
