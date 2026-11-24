@@ -1,49 +1,33 @@
 // Android `PlayerTuning` on the web: a live TS stream is only let run once
-// enough of it is buffered, and after a stall it waits for a longer runway
+// enough of it is buffered, and after a stall it waits for the same runway
 // before resuming instead of restarting on the first byte and underrunning
-// again (which reads as continuous stutter). Thresholds follow Settings →
-// Playback → Buffer size like the Android decision of 2026-09-22, scaled up
-// for the web pipe (TLS proxy hop + JS demux + MSE appends add jitter that
-// ExoPlayer on a Shield never sees): Small = 2 s start / 6 s after a stall,
-// Medium 5 / 8, Large 8 / 12. Measured 2026-11-23: a 5–7 s runway absorbed
-// every delivery dip of a 90 s live session that a 2 s runway did not.
-import { bufferedAhead, bufferedToEnd, FillRate, type BufferThresholds } from './bufferRunway';
+// again (which reads as continuous stutter). The runway follows Settings →
+// Playback → Buffer size (Small 6 s, Medium 8 s, Large 12 s — see
+// ./bufferRunway.ts for why there is one runway, not a short start one).
+// Measured 2026-11-23 on a real provider through the TLS relay: 0 rebuffers,
+// 0 dropped frames over 90 s with a 6 s runway; a 2 s start runway stalled.
+import { runwayReady, type BufferThresholds } from './bufferRunway';
 import { safePlay } from './videoElement';
 
 export { bufferedAhead, bufferedToEnd, thresholdsFor, type BufferThresholds } from './bufferRunway';
 
 // @stateMachine('Buffer gate')
 /**
- * Starting(need) · Playing · Holding(need) · UserPaused. The gate pauses the
- * element itself while it holds (`holding` tells the engine this is not a
- * user pause) and plays it once the buffered runway reaches `need`. A start
- * on a pipe that merely trickles at ~1× is raised from the short start
- * runway to the resume runway first: it is the only moment the runway can be
- * built, so one wait up front replaces a stall a few seconds in.
+ * Starting · Playing · Holding · UserPaused. The gate pauses the element
+ * itself while it holds (`holding` tells the engine this is not a user pause)
+ * and plays it once the buffered runway is there.
  */
 export type GateState =
-  | { kind: 'Starting'; need: number }
-  | { kind: 'Playing' }
-  | { kind: 'Holding'; need: number }
-  | { kind: 'UserPaused' };
-
-/** A `waiting` before this much has actually played is start-up jitter, not an underrun. */
-const SETTLED_SEC = 1;
+  { kind: 'Starting' } | { kind: 'Playing' } | { kind: 'Holding' } | { kind: 'UserPaused' };
 
 export class BufferGate {
-  private state: GateState;
+  private state: GateState = { kind: 'Starting' };
   private ownPause = false;
-  private playStartedAt = 0;
-  private readonly fill: FillRate;
 
   constructor(
     private readonly video: HTMLVideoElement,
     private readonly thresholds: BufferThresholds,
-    now?: () => number,
-  ) {
-    this.state = { kind: 'Starting', need: thresholds.startAheadSec };
-    this.fill = new FillRate(now);
-  }
+  ) {}
 
   get current(): GateState {
     return this.state;
@@ -56,10 +40,7 @@ export class BufferGate {
 
   /** `play`: a user play while paused, or the engine's first start — held until the runway exists. */
   onPlay(): void {
-    if (this.state.kind === 'UserPaused') {
-      this.state = { kind: 'Starting', need: this.thresholds.startAheadSec };
-      this.fill.reset();
-    }
+    if (this.state.kind === 'UserPaused') this.state = { kind: 'Starting' };
     this.check();
   }
 
@@ -69,16 +50,9 @@ export class BufferGate {
     else this.state = { kind: 'UserPaused' };
   }
 
-  /**
-   * `waiting` while playing. Browsers fire it spuriously as playback starts; only
-   * a stall after real playback is an underrun worth the long resume runway —
-   * an early one re-arms the (shorter) start runway instead.
-   */
+  /** `waiting` while playing: an underrun — hold until the runway is back. */
   onWaiting(): void {
-    if (this.state.kind !== 'Playing') return;
-    const settled = this.video.currentTime - this.playStartedAt >= SETTLED_SEC;
-    const need = settled ? this.thresholds.resumeAheadSec : this.thresholds.startAheadSec;
-    this.hold({ kind: 'Holding', need });
+    if (this.state.kind === 'Playing') this.hold({ kind: 'Holding' });
   }
 
   /** `progress` / `timeupdate`: enough runway lets a held element go. */
@@ -89,24 +63,9 @@ export class BufferGate {
   private check(): void {
     const s = this.state;
     if (s.kind !== 'Starting' && s.kind !== 'Holding') return;
-    const next = this.nextNeed(s);
-    if (next !== null) return this.hold({ kind: s.kind, need: next });
+    if (!runwayReady(this.video, this.thresholds)) return this.hold(s);
     this.state = { kind: 'Playing' };
-    this.playStartedAt = this.video.currentTime;
     safePlay(this.video);
-  }
-
-  /** The runway a held element still has to reach, or null when it may play now. */
-  private nextNeed(s: { kind: 'Starting' | 'Holding'; need: number }): number | null {
-    const ahead = bufferedAhead(this.video);
-    if (bufferedToEnd(this.video)) return null;
-    if (ahead < s.need) return s.need;
-    return s.kind === 'Starting' && this.trickles(s.need, ahead) ? this.thresholds.resumeAheadSec : null;
-  }
-
-  /** A short start runway only survives on a pipe that bursts; a ~1× pipe gets the resume runway before the first frame. */
-  private trickles(need: number, ahead: number): boolean {
-    return need < this.thresholds.resumeAheadSec && !this.fill.bursting(ahead);
   }
 
   private hold(next: GateState): void {

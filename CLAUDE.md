@@ -247,21 +247,21 @@ npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:80
   `telly.jpc.io` serves `/proxy/?url=` natively (OpenResty `set_by_lua_block`
   host allowlist, OPTIONS 204 preflight, upstream CORS headers hidden, 301/302/
   307/308 followed server-side via `error_page` → named locations, unbuffered,
-  1 h timeouts). No Python hop, no second TLS termination. (2) **Deeper
-  runways** (`bufferRunway.ts`): Small 2 s start / 6 s resume, Medium 5/8,
-  Large 8/12 — Android's numbers scaled for TLS hop + JS demux + MSE append
-  jitter; the mpegts.js stash is 1 MB so appends arrive in ~1 s steps.
-  (3) **Adaptive start.** The provider is a strict ~1× pipe: a cold connection
-  yields 1.0–1.5 MB in its first 2 s of a ~0.9 MB/s stream, so a 2 s runway
-  drained to 0.06 s within 5 s of playing (1 rebuffer of 6.7 s). `FillRate`
-  measures media-seconds per wall-second from the moment the gate attaches;
-  under 1.5× the start is raised to the resume runway, because the runway can
-  only be built before the first frame. Bursting sources (CI fixture server,
-  a user resume with media already buffered) still start at the short runway.
-  Result: 0 rebuffers / 0 stalls / 0 dropped frames over 90 s, runway 3.3–7.7 s,
-  first frame at ~6.9 s on this provider (one wait, then steady) — vs 2.1 s +
-  a 6.7 s stall. A `waiting` within the first second of play re-arms only the
-  start runway (browsers fire it spuriously as playback begins). (4) **Never
+  1 h timeouts). No Python hop, no second TLS termination. (2) **One runway, built before the first frame** (`bufferRunway.ts`): Small
+  6 s, Medium 8 s, Large 12 s, the same runway before the first frame and after
+  an underrun. Why not Android's short start runway: the provider is a strict
+  ~1× pipe (a connection yields 1.0–1.5 MB in its first 2 s of a ~0.9 MB/s
+  stream) — a 2 s start runway drained to 0.06 s within 5 s of playing and a
+  6.7 s stall followed. An adaptive variant (measure the fill rate, start short
+  only when the pipe bursts) was tried and reverted the same day: after an idle
+  minute the provider sends a ~2 s pre-roll burst that reads as "bursting", the
+  stream starts on 2 s and stalls for 8 s when the burst ends (seen live, never
+  locally where the line was never idle). A 1× pipe cannot build runway while
+  playing, and a pipe that truly bursts fills 6 s in under two seconds anyway,
+  so the long runway costs nothing where a short one would have worked. mpegts.js
+  stash is 1 MB, so appends arrive in ~1 s steps. (3) **Result** through the
+  relay over 90 s: 0 rebuffers, 0 stalls, 0 dropped frames, runway 3.3–7.7 s,
+  first frame ~6.9 s on this provider (one wait, then steady). (4) **Never
   HEAD a stream.** The provider treats HEAD as an open session: the GET that
   followed it got ~50 KB in 2 s until the phantom session timed out. The
   file-vs-live probe is now a ranged GET whose body is cancelled unread (a
