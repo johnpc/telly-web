@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SNIFF_BYTES, TS_PACKET } from './containerSniff';
+import { forgetProbes } from './probeMemo';
 import { probeUrl, sniffStream, UNKNOWN_PROBE, type FetchLike } from './urlProbe';
 
 function respond(status: number, headers: Record<string, string>): FetchLike {
@@ -7,9 +8,20 @@ function respond(status: number, headers: Record<string, string>): FetchLike {
 }
 
 describe('probeUrl', () => {
-  it('HEADs the url and reads media type + content length', async () => {
-    const fetchImpl = vi.fn(
-      respond(200, { 'content-type': 'video/MP2T; charset=x', 'content-length': '4096' }),
+  afterEach(() => forgetProbes());
+
+  it('sends a ranged GET (never HEAD), drops the body unread and reads media type + content length', async () => {
+    let cancelled = false;
+    const body = endlessBody(new Uint8Array(188), () => {
+      cancelled = true;
+    });
+    const fetchImpl = vi.fn<FetchLike>(() =>
+      Promise.resolve(
+        new Response(body, {
+          status: 200,
+          headers: { 'content-type': 'video/MP2T; charset=x', 'content-length': '4096' },
+        }),
+      ),
     );
     await expect(probeUrl('http://s/1.ts', fetchImpl)).resolves.toEqual({
       ok: true,
@@ -17,7 +29,10 @@ describe('probeUrl', () => {
       contentLength: 4096,
     });
     expect(fetchImpl.mock.calls[0]?.[0]).toBe('http://s/1.ts');
-    expect(fetchImpl.mock.calls[0]?.[1].method).toBe('HEAD');
+    const init = fetchImpl.mock.calls[0]?.[1];
+    expect(init?.method).toBeUndefined();
+    expect(init?.headers).toEqual({ Range: `bytes=0-${SNIFF_BYTES - 1}` });
+    expect(cancelled).toBe(true);
   });
 
   it('a chunked live pipe has no length; a missing or blank type is null', async () => {

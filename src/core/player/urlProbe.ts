@@ -1,12 +1,16 @@
-// Two probes for provider URLs. `probeUrl` is ONE HEAD: "is this `.ts` a
-// file or a live pipe?" (Content-Length present → finite file; chunked /
-// absent → live). `sniffStream` decides the engine for an EXTENSIONLESS url
+// Two probes for provider URLs. `probeUrl` asks "is this `.ts` a file or a
+// live pipe?" (Content-Length present → finite file; chunked / absent → live)
+// with a ranged GET whose body is dropped unread — never a HEAD: measured
+// 2026-11-23, a provider treats HEAD as an open session, and the GET that
+// follows it is starved to ~50 KB/2 s until that phantom session times out,
+// whereas a cancelled GET closes the upstream at once. `sniffStream` decides the engine for an EXTENSIONLESS url
 // with a small ranged GET: the first bytes name the container (providers
 // label raw MPEG-TS as `video/mp4`), and only an undecided body falls back
 // to the Content-Type. Failures (no CORS, 405, timeout) resolve to the
 // unknown probe / null so callers fall back to the URL and the declared
 // `live` flag.
 import { CONTAINER_TYPES, SNIFF_BYTES, sniffContainer } from './containerSniff';
+import { recallProbe, rememberProbe } from './probeMemo';
 
 export interface UrlProbe {
   ok: boolean;
@@ -42,16 +46,30 @@ async function timed<T>(
   }
 }
 
+/** The headers a probe cares about, as `UrlProbe`. */
+function probeOf(response: Response): UrlProbe {
+  return {
+    ok: true,
+    contentType: mediaType(response.headers.get('content-type')),
+    contentLength: lengthOf(response.headers.get('content-length')),
+  };
+}
+
 export function probeUrl(url: string, fetchImpl: FetchLike | null = defaultFetch()): Promise<UrlProbe> {
+  const remembered = recallProbe(url);
+  if (remembered !== null) return Promise.resolve(remembered);
   return timed(fetchImpl, UNKNOWN_PROBE, async (f, signal) => {
-    const response = await f(url, { method: 'HEAD', signal });
+    const response = await f(url, { headers: rangeHeader(), signal });
+    await response.body?.cancel().catch(() => undefined);
     if (!response.ok) return UNKNOWN_PROBE;
-    return {
-      ok: true,
-      contentType: mediaType(response.headers.get('content-type')),
-      contentLength: lengthOf(response.headers.get('content-length')),
-    };
+    const probe = probeOf(response);
+    rememberProbe(url, probe);
+    return probe;
   });
+}
+
+function rangeHeader(): Record<string, string> {
+  return { Range: `bytes=0-${SNIFF_BYTES - 1}` };
 }
 
 /** "video/mp2t; charset=x" → "video/mp2t". */
@@ -105,8 +123,9 @@ export function sniffStream(
   fetchImpl: FetchLike | null = defaultFetch(),
 ): Promise<string | null> {
   return timed(fetchImpl, null, async (f, signal) => {
-    const response = await f(url, { headers: { Range: `bytes=0-${SNIFF_BYTES - 1}` }, signal });
+    const response = await f(url, { headers: rangeHeader(), signal });
     if (!response.ok) return null;
+    rememberProbe(url, probeOf(response));
     const container = sniffContainer(await readHead(response, SNIFF_BYTES));
     return container === null ? mediaType(response.headers.get('content-type')) : CONTAINER_TYPES[container];
   });

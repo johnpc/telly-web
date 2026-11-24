@@ -28,6 +28,8 @@ export function mpegtsConfig(isLive: boolean): Mpegts.Config {
     autoCleanupSourceBuffer: true,
     autoCleanupMaxBackwardDuration: 60,
     autoCleanupMinBackwardDuration: 30,
+    // A 1 MB IO stash smooths the provider's bursty delivery into fewer, larger MSE appends.
+    stashInitialSize: 1024 * 1024,
   };
 }
 
