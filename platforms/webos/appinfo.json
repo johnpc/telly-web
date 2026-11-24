@@ -1,0 +1,15 @@
+{
+  "id": "io.jpc.telly",
+  "version": "0.1.0",
+  "vendor": "John Corser",
+  "type": "web",
+  "main": "index.html",
+  "title": "telly",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "bgColor": "#0e1116",
+  "iconColor": "#0e1116",
+  "resolution": "1920x1080",
+  "disableBackHistoryAPI": true,
+  "requiredACG": []
+}

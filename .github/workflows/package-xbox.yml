@@ -1,0 +1,82 @@
+name: Package (Xbox / Microsoft Store MSIX)
+
+# Builds the Microsoft Store package for https://telly.jpc.io with PWABuilder's
+# Windows packaging service (the same service pwabuilder.com uses). Manual only.
+# Needs three repository variables (Settings → Secrets and variables → Actions →
+# Variables), all read off Partner Center → Product management → Product identity
+# after reserving the app name "telly":
+#   XBOX_PACKAGE_ID      Package/Identity/Name     e.g. 12345JohnCorser.telly
+#   XBOX_PUBLISHER_ID    Package/Identity/Publisher e.g. CN=0a1b2c3d-…
+#   XBOX_PUBLISHER_NAME  Publisher display name     e.g. John Corser
+# None of them is a secret. When any is unset the job explains and stops green.
+# The resulting zip (an .msixbundle + .msix + readme) is uploaded as an artifact;
+# upload it in Partner Center → Packages, selecting the Xbox device family.
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Site to package (must serve manifest.webmanifest + sw.js)
+        default: https://telly.jpc.io/
+        required: true
+      version:
+        description: Package version (Store requires x.y.z.0 and > the last submission)
+        default: 1.0.0.0
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  msix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      XBOX_PACKAGE_ID: ${{ vars.XBOX_PACKAGE_ID }}
+      XBOX_PUBLISHER_ID: ${{ vars.XBOX_PUBLISHER_ID }}
+      XBOX_PUBLISHER_NAME: ${{ vars.XBOX_PUBLISHER_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Partner Center identity variables
+        id: vars
+        run: |
+          missing=()
+          for v in XBOX_PACKAGE_ID XBOX_PUBLISHER_ID XBOX_PUBLISHER_NAME; do
+            [ -n "${!v}" ] || missing+=("$v")
+          done
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::notice::Skipping MSIX packaging — repository variable(s) not set: ${missing[*]}."
+            echo "Reserve the app name in Partner Center, then set them under Settings → Secrets and variables → Actions → Variables (see docs/release-xbox.md)." >> "$GITHUB_STEP_SUMMARY"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Compose PWABuilder request
+        if: steps.vars.outputs.ready == 'true'
+        run: |
+          jq --arg url "${{ inputs.url }}" --arg version "${{ inputs.version }}" \
+             --arg pkg "$XBOX_PACKAGE_ID" --arg pub "$XBOX_PUBLISHER_ID" --arg name "$XBOX_PUBLISHER_NAME" '
+            del(._comment, ._display)
+            | .url = $url | .version = $version | .packageId = $pkg
+            | .publisher.commonName = (if ($pub | startswith("CN=")) then $pub else "CN=" + $pub end)
+            | .publisher.displayName = $name
+            | .manifestUrl = ($url | rtrimstr("/")) + "/manifest.webmanifest"
+            | .images.baseImage = ($url | rtrimstr("/")) + "/icon.png"
+          ' platforms/xbox/pwabuilder.json > request.json
+          jq . request.json
+      - name: Generate MSIX with the PWABuilder Windows service
+        if: steps.vars.outputs.ready == 'true'
+        run: |
+          curl --fail --silent --show-error --location \
+            --header 'Content-Type: application/json' \
+            --header 'platform-identifier: PWABuilder' \
+            --header 'platform-identifier-version: github-actions' \
+            --data @request.json \
+            --output telly-xbox-msix.zip \
+            https://pwabuilder-winserver.centralus.cloudapp.azure.com/msix/generatezip
+          unzip -l telly-xbox-msix.zip
+      - uses: actions/upload-artifact@v4
+        if: steps.vars.outputs.ready == 'true'
+        with:
+          name: telly-xbox-msix-${{ inputs.version }}
+          path: telly-xbox-msix.zip
+          if-no-files-found: error

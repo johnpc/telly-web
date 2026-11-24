@@ -37,6 +37,7 @@ in by itself on first start.
 | MENU                 | ContextMenu, `m`                       |
 | RW / FF / Play-Pause | media keys, `,` `.` `p`                |
 | Digits               | 0–9 (number entry zaps)                |
+| Xbox controller      | A=OK, B=BACK, D-pad/stick, LB/RB=CH±   |
 
 ## Self-host (Docker)
 
@@ -49,6 +50,16 @@ docker run -d --name telly-web -p 127.0.0.1:8002:80 mrorbitman/telly-web:latest
 
 See `docker/compose.example.yaml`. Put your own TLS reverse proxy in front for anything beyond
 localhost; the container itself has no auth and stores nothing.
+
+## TV app stores
+
+The same build ships as a store app; each wrapper is a runtime no-op elsewhere:
+
+| Platform                 | Package                                    | Recipe                                         |
+| ------------------------ | ------------------------------------------ | ---------------------------------------------- |
+| Xbox / Microsoft Store   | PWA → MSIX via PWABuilder (`package-xbox`) | [docs/release-xbox.md](docs/release-xbox.md)   |
+| LG webOS (webOS 22+)     | `npm run package:webos` → `.ipk`           | [docs/release-webos.md](docs/release-webos.md) |
+| Samsung Tizen (Tizen 8+) | `npm run package:tizen` → `.wgt`           | [docs/release-tizen.md](docs/release-tizen.md) |
 
 ## Development
 

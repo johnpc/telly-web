@@ -10,8 +10,9 @@ import { ScreenStackScreen } from './ScreenStackScreen';
 import { useApplyAppearance, useConfigAutoBackup } from '@/features/settings';
 import { useBackgroundRefresh } from './useBackgroundRefresh';
 import { useStartRoute } from './useStartRoute';
+import { exitToPlatform } from '@/platform/exit';
 
-/** Hosts the route stack's screens; BACK at the root is the web "exit" (the `Exited` route). */
+/** Hosts the route stack's screens; BACK at the root exits: to the TV on webOS/Tizen, else the `Exited` route. */
 export function RootScreen(): JSX.Element {
   const navigator = useNavigator();
   const route = useRoute();
@@ -22,7 +23,7 @@ export function RootScreen(): JSX.Element {
   const onBack = (): void => {
     // A BACK before the start route resolves must not count as "exit"; at the root it IS the exit.
     if (route.kind === 'Boot' || route.kind === 'Exited') return;
-    if (!navigator.pop()) navigator.replaceAll({ kind: 'Exited' });
+    if (!navigator.pop() && !exitToPlatform()) navigator.replaceAll({ kind: 'Exited' });
   };
   return (
     <RemoteKeysProvider onBack={onBack}>

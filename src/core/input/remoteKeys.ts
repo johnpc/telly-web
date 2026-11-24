@@ -1,5 +1,6 @@
 // The ONE place keyboard events become remote keys (CLAUDE.md "remote-first").
 // Everything downstream consumes `RemoteKey`s, never `KeyboardEvent`s.
+import { GAMEPAD_KEY_TABLE } from './gamepadKeys';
 
 /** The D-pad half of the remote; also what the focus engine moves by. */
 export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
@@ -41,6 +42,7 @@ export function isDirection(key: RemoteKey): key is Direction {
 
 /** `KeyboardEvent.key` → remote key, exactly the table in CLAUDE.md. */
 const KEY_TABLE: Readonly<Record<string, SimpleRemoteKey>> = {
+  ...GAMEPAD_KEY_TABLE,
   ArrowUp: 'UP',
   ArrowDown: 'DOWN',
   ArrowLeft: 'LEFT',
@@ -64,6 +66,8 @@ const KEY_TABLE: Readonly<Record<string, SimpleRemoteKey>> = {
   MediaTrackNext: 'FAST_FORWARD',
   '.': 'FAST_FORWARD',
   MediaPlayPause: 'PLAY_PAUSE',
+  MediaPlay: 'PLAY_PAUSE',
+  MediaPause: 'PLAY_PAUSE',
   p: 'PLAY_PAUSE',
 };
 
@@ -106,6 +110,8 @@ const KEY_CODE_TABLE: Readonly<Record<number, SimpleRemoteKey>> = {
   412: 'REWIND',
   417: 'FAST_FORWARD',
   10252: 'PLAY_PAUSE',
+  415: 'PLAY_PAUSE',
+  19: 'PLAY_PAUSE',
 };
 
 /**

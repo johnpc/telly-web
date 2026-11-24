@@ -1,0 +1,12 @@
+/* Xbox renders the page edge-to-edge on the TV; TVs overscan and the console's
+   own UI guidelines keep content inside a safe area. 2.5 % of the width is
+   48 px at 1080p. The class is set on <html> by src/platform/pwa.ts only when
+   the user agent is an Xbox, so every other host (and the acceptance suite)
+   is untouched. */
+:root {
+  --tv-safe-inset: 2.5vw;
+}
+
+html.tv-safe-area #root {
+  padding: var(--tv-safe-inset);
+}

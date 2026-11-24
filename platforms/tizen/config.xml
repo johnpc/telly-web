@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Samsung Tizen (Smart TV) widget manifest for telly-web.
+  platforms/tizen/package.sh stages this next to the Vite build (VITE_BASE=./)
+  and zips the folder into platforms/tizen/out/telly.wgt. The `version`
+  attribute below is rewritten from package.json at package time.
+  See docs/release-tizen.md.
+-->
+<widget xmlns="http://www.w3.org/ns/widgets"
+        xmlns:tizen="http://tizen.org/ns/widgets"
+        id="https://telly.jpc.io/tizen"
+        version="0.1.0"
+        viewmodes="maximized">
+  <!-- package = 10 alphanumerics; application id = <package>.<name>. -->
+  <tizen:application id="tellyjpcio.telly" package="tellyjpcio" required_version="2.4"/>
+  <content src="index.html"/>
+  <name>telly</name>
+  <description>A TiviMate-style IPTV player. Remote-first: arrow keys and OK drive everything.</description>
+  <author href="https://github.com/johnpc">John Corser</author>
+  <license href="https://github.com/johnpc/telly-web/blob/main/LICENSE">MIT</license>
+  <!-- 512x512 PNG shipped by the web build itself (public/icon-512.png). -->
+  <icon src="icon-512.png"/>
+  <feature name="http://tizen.org/feature/screen.size.all"/>
+  <tizen:profile name="tv"/>
+  <!-- Fetch playlists, EPG, logos and streams from any provider the user enters. -->
+  <tizen:privilege name="http://developer.samsung.com/privilege/network.public"/>
+  <!-- tizen.tvinputdevice.registerKey(): channel, media and Exit keys (src/platform/tizen.ts). -->
+  <tizen:privilege name="http://tizen.org/privilege/tv.inputdevice"/>
+  <access origin="*" subdomains="true"/>
+  <tizen:setting screen-orientation="landscape"
+                 context-menu="disable"
+                 background-support="disable"
+                 encryption="disable"
+                 hwkey-event="enable"/>
+</widget>

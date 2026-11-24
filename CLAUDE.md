@@ -23,6 +23,7 @@ layer for mobile web "in a pinch" — nothing may exist that only a mouse can re
 | RW / FF    | `MediaRewind`/`MediaFastForward`, `MediaTrackPrevious`/`MediaTrackNext`, `,` / `.` |
 | Play/Pause | `MediaPlayPause`, `p`                                                              |
 | Digits     | `0`–`9` (number entry zaps, like the Android app)                                  |
+| Gamepad    | Xbox Edge `Gamepad*` names: A=OK, B=BACK, D-pad/left stick, LB/RB=CH, LT/RT=RW/FF  |
 
 Keys are decoded ONCE in `src/core/input/remoteKeys.ts` into a `RemoteKey` union;
 everything else consumes `RemoteKey`s. Focus moves through `src/core/focus/` — a
@@ -239,3 +240,50 @@ npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:80
   manifest (`public/manifest.webmanifest`, 192/512 icons) makes the site
   installable — the input for PWABuilder (Xbox/Microsoft Store) and webOS/Tizen
   web-app packaging.
+- **2026-11-23** Rock-solid live playback (director: "can we do even better?").
+  Measured again on the real provider through the TLS relay with a 90 s probe.
+  (1) **The relay is nginx itself.** The Python `telly-stream-proxy` is retired
+  (stack stopped, kept as fallback); the Nginx Proxy Manager host for
+  `telly.jpc.io` serves `/proxy/?url=` natively (OpenResty `set_by_lua_block`
+  host allowlist, OPTIONS 204 preflight, upstream CORS headers hidden, 301/302/
+  307/308 followed server-side via `error_page` → named locations, unbuffered,
+  1 h timeouts). No Python hop, no second TLS termination. (2) **Deeper
+  runways** (`bufferRunway.ts`): Small 2 s start / 6 s resume, Medium 5/8,
+  Large 8/12 — Android's numbers scaled for TLS hop + JS demux + MSE append
+  jitter; the mpegts.js stash is 1 MB so appends arrive in ~1 s steps.
+  (3) **Adaptive start.** The provider is a strict ~1× pipe: a cold connection
+  yields 1.0–1.5 MB in its first 2 s of a ~0.9 MB/s stream, so a 2 s runway
+  drained to 0.06 s within 5 s of playing (1 rebuffer of 6.7 s). `FillRate`
+  measures media-seconds per wall-second from the moment the gate attaches;
+  under 1.5× the start is raised to the resume runway, because the runway can
+  only be built before the first frame. Bursting sources (CI fixture server,
+  a user resume with media already buffered) still start at the short runway.
+  Result: 0 rebuffers / 0 stalls / 0 dropped frames over 90 s, runway 3.3–7.7 s,
+  first frame at ~6.9 s on this provider (one wait, then steady) — vs 2.1 s +
+  a 6.7 s stall. A `waiting` within the first second of play re-arms only the
+  start runway (browsers fire it spuriously as playback begins). (4) **Never
+  HEAD a stream.** The provider treats HEAD as an open session: the GET that
+  followed it got ~50 KB in 2 s until the phantom session timed out. The
+  file-vs-live probe is now a ranged GET whose body is cancelled unread (a
+  cancelled GET closes the upstream at once — measured), and both probes
+  leave their headers in `probeMemo` (30 s TTL) so a tune makes one probe
+  connection, not two.
+- **2026-11-23** Store packaging — ONE web build, three wrappers, each a
+  runtime no-op elsewhere (`src/platform/`, registered in `bootPlatform()`;
+  release recipes in `docs/release-{xbox,webos,tizen}.md`, workflows
+  `package-*.yml`). **Xbox / Microsoft Store:** PWA — `public/sw.js` app-shell
+  service worker (precaches the start document's assets, never intercepts
+  playlists/EPG/streams/`/proxy/`; offline relaunch verified), `tv-safe-area`
+  padding (2.5 vw) when the UA says Xbox, `Gamepad*` key names decoded in
+  `gamepadKeys.ts`, PWABuilder MSIX request in `platforms/xbox/`. **LG webOS:**
+  `platforms/webos/` appinfo + `package.sh` → `ares-package` `.ipk` (webOS 22+,
+  Chromium 87: `??=`/`#private`/`replaceAll` in the bundle); `webOSRelaunch`/
+  visibility re-focus the window. **Samsung Tizen:** `platforms/tizen/`
+  config.xml + `package.sh` → `.wgt` built at `chrome108` (Tizen 8.0+: Tailwind
+  v4's `@layer` is dropped by older Chromium); TV keys registered via
+  `tizen.tvinputdevice` (never `Exit`, which must stay native). **One exit
+  seam:** `RootScreen` calls `exitToPlatform()` (`src/platform/exit.ts`) when
+  BACK finds nothing to pop — Tizen `application.exit()`, webOS
+  `platformBack()` — and shows the web `Exited` route only when no platform
+  took it. Store accounts, certificates and device testing are the owner's
+  manual steps, listed in each recipe.

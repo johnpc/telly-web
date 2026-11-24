@@ -1,0 +1,51 @@
+{
+  "_comment": "PWABuilder Windows package options for https://telly.jpc.io (POST body for /msix/generatezip). Non-secret fields are filled; packageId / publisher come from Partner Center after reserving the app name 'telly' — the package-xbox.yml workflow injects them from repository variables XBOX_PACKAGE_ID / XBOX_PUBLISHER_ID / XBOX_PUBLISHER_NAME.",
+  "name": "telly",
+  "packageId": "REPLACE_WITH_PARTNER_CENTER_PACKAGE_IDENTITY_NAME",
+  "url": "https://telly.jpc.io/",
+  "version": "1.0.0.0",
+  "allowSigning": true,
+  "classicPackage": { "generate": false },
+  "publisher": {
+    "displayName": "REPLACE_WITH_PARTNER_CENTER_PUBLISHER_DISPLAY_NAME",
+    "commonName": "CN=REPLACE_WITH_PARTNER_CENTER_PUBLISHER_ID_GUID"
+  },
+  "edgeChannel": "stable",
+  "generateModernPackage": true,
+  "manifestUrl": "https://telly.jpc.io/manifest.webmanifest",
+  "manifest": {
+    "id": "./",
+    "name": "telly",
+    "short_name": "telly",
+    "description": "A TiviMate-style IPTV player for the web. Remote-first: arrow keys and OK drive everything.",
+    "lang": "en",
+    "dir": "ltr",
+    "start_url": "./",
+    "scope": "./",
+    "display": "fullscreen",
+    "display_override": ["fullscreen", "standalone"],
+    "orientation": "landscape",
+    "background_color": "#0e1116",
+    "theme_color": "#0e1116",
+    "categories": ["entertainment", "video"],
+    "prefer_related_applications": false,
+    "icons": [
+      { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+      { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
+      { "src": "icon.png", "sizes": "1024x1024", "type": "image/png" }
+    ]
+  },
+  "images": {
+    "baseImage": "https://telly.jpc.io/icon.png",
+    "backgroundColor": "#0e1116",
+    "padding": 0.1
+  },
+  "resourceLanguage": "en-us",
+  "startUrl": "/",
+  "targetDeviceFamilies": ["Desktop", "Xbox"],
+  "_display": {
+    "resolution": "1920x1080",
+    "orientation": "landscape",
+    "safeArea": "2.5% (48 px) via --tv-safe-inset"
+  }
+}

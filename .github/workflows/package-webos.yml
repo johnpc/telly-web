@@ -1,0 +1,52 @@
+name: Package (LG webOS)
+
+# Builds the LG webOS .ipk (platforms/webos/package.sh) for every release tag
+# and on demand, keeps it as a workflow artifact and attaches it to the GitHub
+# Release of the tag. Nothing here talks to LG: uploading to the Seller Lounge
+# is a manual step (docs/release-webos.md).
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: package-webos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ipk:
+    name: ares-package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build and package
+        id: pkg
+        run: |
+          bash platforms/webos/package.sh | tee /tmp/package-webos.log
+          echo "ipk=$(sed -n 's/^IPK=//p' /tmp/package-webos.log | tail -n 1)" >> "$GITHUB_OUTPUT"
+        env:
+          VITE_APP_VERSION: ${{ github.sha }}
+      - name: List the package contents (Debian ar archive)
+        run: ar t "${{ steps.pkg.outputs.ipk }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: webos-ipk
+          path: ${{ steps.pkg.outputs.ipk }}
+          if-no-files-found: error
+      - name: Attach to the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" "${{ steps.pkg.outputs.ipk }}" --clobber

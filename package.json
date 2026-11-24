@@ -17,6 +17,8 @@
     "e2e": "bddgen && playwright test",
     "e2e:ui": "bddgen && playwright test --ui",
     "quality": "bash scripts/quality.sh",
+    "package:tizen": "bash platforms/tizen/package.sh",
+    "package:webos": "bash platforms/webos/package.sh",
     "prepare": "husky"
   },
   "dependencies": {

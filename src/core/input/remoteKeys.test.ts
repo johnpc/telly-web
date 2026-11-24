@@ -120,7 +120,40 @@ describe('TV browser key codes', () => {
     expect(decodeRemoteKey(event('', { keyCode: 427 }))).toBe('CHANNEL_UP');
     expect(decodeRemoteKey(event('', { keyCode: 428 }))).toBe('CHANNEL_DOWN');
     expect(decodeRemoteKey(event('', { keyCode: 10252 }))).toBe('PLAY_PAUSE');
+    expect(decodeRemoteKey(event('', { keyCode: 415 }))).toBe('PLAY_PAUSE');
+    expect(decodeRemoteKey(event('Unidentified', { keyCode: 19 }))).toBe('PLAY_PAUSE');
+    expect(decodeRemoteKey(event('MediaPlay'))).toBe('PLAY_PAUSE');
+    expect(decodeRemoteKey(event('MediaPause'))).toBe('PLAY_PAUSE');
     expect(decodeRemoteKey(event('ArrowUp', { keyCode: 461 }))).toBe('UP');
     expect(decodeRemoteKey(event('', { keyCode: 999 }))).toBeNull();
+  });
+});
+
+describe('Xbox controller (Edge / WebView2 Gamepad* key names)', () => {
+  it.each<[string, RemoteKey]>([
+    ['GamepadA', 'OK'],
+    ['GamepadB', 'BACK'],
+    ['GamepadX', 'PLAY_PAUSE'],
+    ['GamepadDPadUp', 'UP'],
+    ['GamepadDPadDown', 'DOWN'],
+    ['GamepadDPadLeft', 'LEFT'],
+    ['GamepadDPadRight', 'RIGHT'],
+    ['GamepadLeftThumbstickUp', 'UP'],
+    ['GamepadLeftThumbstickDown', 'DOWN'],
+    ['GamepadLeftThumbstickLeft', 'LEFT'],
+    ['GamepadLeftThumbstickRight', 'RIGHT'],
+    ['GamepadLeftShoulder', 'CHANNEL_DOWN'],
+    ['GamepadRightShoulder', 'CHANNEL_UP'],
+    ['GamepadMenu', 'MENU'],
+    ['GamepadView', 'MENU'],
+    ['GamepadLeftTrigger', 'REWIND'],
+    ['GamepadRightTrigger', 'FAST_FORWARD'],
+  ])('maps %s', (key, expected) => {
+    expect(decodeRemoteKey(event(key))).toEqual(expected);
+  });
+
+  it('leaves Y unmapped and still decodes gamepad keys inside a text field', () => {
+    expect(decodeRemoteKey(event('GamepadY'))).toBeNull();
+    expect(decodeRemoteKey(event('GamepadB', { target: input('text') }))).toBe('BACK');
   });
 });

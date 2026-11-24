@@ -1,0 +1,53 @@
+name: Package (Samsung Tizen)
+
+# Builds the Samsung Smart TV widget (platforms/tizen/package.sh → telly.wgt) on
+# every v*.*.* tag and on demand, then keeps it as a workflow artifact and, for
+# tags, attaches it to the GitHub release. CI produces an UNSIGNED package (a
+# plain zip): installing on a TV and submitting to the Seller Portal need the
+# owner's Samsung author + distributor certificates — see docs/release-tizen.md
+# "Signing in CI" for the secrets to add before enabling the signing step.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  wgt:
+    name: telly.wgt (unsigned)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the widget
+        run: bash platforms/tizen/package.sh
+        env:
+          VITE_APP_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+      - name: Name the file after the tag
+        id: name
+        run: |
+          suffix="${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
+          cp platforms/tizen/out/telly.wgt "platforms/tizen/out/telly-tizen-${suffix}-unsigned.wgt"
+          echo "file=platforms/tizen/out/telly-tizen-${suffix}-unsigned.wgt" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: telly-tizen-wgt
+          path: ${{ steps.name.outputs.file }}
+          if-no-files-found: error
+      - name: Attach to the GitHub release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Sibling packaging workflows (Xbox, webOS) race to create the same
+          # release on the tag; whoever loses the race just uploads.
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --generate-notes || true
+          gh release upload "$GITHUB_REF_NAME" "${{ steps.name.outputs.file }}" --clobber
