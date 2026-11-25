@@ -130,6 +130,13 @@ Feature: Settings
     And the row "Use external player" is not locked
     And the row "Skip steps" is not locked
     And the row "Buffer size" is not locked
+    # Buffer size says what it does: the runway (seconds) built before a channel
+    # starts and after a stall, and which line each size suits.
+    And the "Buffer size" row shows "Small · 6 s before a channel starts, for good lines"
+    When I activate "Buffer size"
+    Then I see "Large — 12 s to start, for lines that stall"
+    When I choose "Medium — 8 s to start, for jittery lines"
+    Then the "Buffer size" row shows "Medium · 8 s before a channel starts, for jittery lines"
     And the "Auto frame rate (AFR)" row shows "Off"
     And the "Use external player" row shows "Off"
     And the "Skip steps" row shows "10s / 30s / 1m / 5m"
@@ -148,6 +155,7 @@ Feature: Settings
     Then the "Auto frame rate (AFR)" row shows "On (also switch refresh rate on stop)"
     And the "Use external player" row shows "On"
     And the "Skip steps" row shows "30s / 1m / 5m / 10m"
+    And the "Buffer size" row shows "Medium · 8 s before a channel starts, for jittery lines"
 
   # telly has no premium tier: the reference locks the playlist URL, UA,
   # groups and update rows behind Unlock Premium; telly ships them unlocked.

@@ -1,4 +1,5 @@
 import { TellySettings } from '@/core/settings/tellySettings';
+import { bufferSizeOptions } from '../bufferSizeCopy';
 import {
   AFR_OPTIONS,
   EXTERNAL_PLAYER_OPTIONS,
@@ -17,12 +18,7 @@ import { pickerOf, sameRaw, type PickerSpec } from './pickerSpec';
 
 /** The Playback pickers (port of Android `SettingsPickers` + `SettingsPickersPlayback.kt`). */
 export const playbackPickerSpecs: readonly PickerSpec[] = [
-  pickerOf(
-    RowIds.PLAYBACK_BUFFER_SIZE,
-    'Buffer size',
-    TellySettings.BUFFER_SIZE,
-    sameRaw(['Small', 'Medium', 'Large']),
-  ),
+  pickerOf(RowIds.PLAYBACK_BUFFER_SIZE, 'Buffer size', TellySettings.BUFFER_SIZE, bufferSizeOptions()),
   pickerOf(
     RowIds.PLAYBACK_AUDIO_DECODER,
     'Audio decoder',

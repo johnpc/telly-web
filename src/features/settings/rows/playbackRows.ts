@@ -1,5 +1,6 @@
 import type { SettingsRepository } from '@/core/settings/settingsRepository';
 import { TellySettings } from '@/core/settings/tellySettings';
+import { bufferSizeSummary } from '../bufferSizeCopy';
 import { RowIds } from '../rowIds';
 import { header, type SettingsRow, toggle, value } from '../settingsRow';
 
@@ -8,13 +9,13 @@ export const BROWSER_DECIDES = 'Kept for backups; the browser picks its own deco
 /**
  * Playback pane rows (catalogue 60–62; port of Android `SettingsRowsPlayback.kt`).
  * Buffer size, the decoder picks, AFR, external player and Skip steps are
- * live pickers. Web honesties: decoders persist but the browser decides;
+ * live pickers. Buffer size spells out its runway in seconds (`bufferSizeCopy`). Web honesties: decoders persist but the browser decides;
  * AFR is a display-mode switch the web cannot perform, so it stays a live
  * picker (its pick persists) with the caveat in its summary.
  */
 export function playbackRows(s: SettingsRepository): SettingsRow[] {
   return [
-    value(RowIds.PLAYBACK_BUFFER_SIZE, 'Buffer size', s.get(TellySettings.BUFFER_SIZE)),
+    value(RowIds.PLAYBACK_BUFFER_SIZE, 'Buffer size', bufferSizeSummary(s.get(TellySettings.BUFFER_SIZE))),
     value(
       RowIds.PLAYBACK_AUDIO_DECODER,
       'Audio decoder',
