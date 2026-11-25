@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { StreamConcurrency } from '@/core/player';
 import { freshDb } from '@/test/dbFixtures';
 import { RecordingEngine } from './recordingEngine';
 import { RecordingFiles } from './recordingFiles';
 import { RecordingStore } from './recordingStore';
 import { FakeDirectory, bytes, fakeEntry } from './recordingTestSupport';
-import type { StreamRecorder } from './streamRecorder';
+import type { FetchLike, StreamRecorder } from './streamRecorder';
 
 interface Rig {
   store: RecordingStore;
@@ -13,7 +14,12 @@ interface Rig {
   clock: { now: number };
 }
 
-function rig(recorder: StreamRecorder, retryDelayMs = 0): Rig {
+function rig(
+  recorder: StreamRecorder,
+  retryDelayMs = 0,
+  concurrency?: StreamConcurrency,
+  fetch?: FetchLike,
+): Rig {
   const clock = { now: 1_000 };
   const dir = new FakeDirectory();
   const store = new RecordingStore(freshDb(), () => clock.now);
@@ -28,6 +34,8 @@ function rig(recorder: StreamRecorder, retryDelayMs = 0): Rig {
     recorder,
     retryDelayMs,
     sizeUpdateMs: 0,
+    concurrency,
+    ...(fetch === undefined ? {} : { fetch }),
   });
   return { store, dir, engine, clock };
 }
@@ -106,5 +114,32 @@ describe('RecordingEngine', () => {
     await engine.recoverStale();
     expect(await store.byId(withFile.id)).toMatchObject({ status: 'DONE', sizeBytes: 2 });
     expect((await store.byId(empty.id))?.status).toBe('FAILED');
+  });
+
+  it('a capture refused by a one-stream provider is FAILED with the reason and keeps no slate file', async () => {
+    const registry = new StreamConcurrency(
+      () => 0,
+      () => undefined,
+    );
+    registry.open('http://x/news-one.ts', true);
+    // The slate: a live pipe (no Content-Length) that yields bytes and ends at once.
+    const slate: StreamRecorder = async (url, sink, ctx) => {
+      await ctx.fetch(url);
+      await sink.write(bytes(7, 7, 7));
+      return 3;
+    };
+    const livePipe: FetchLike = (url) => Promise.resolve(new Response(url));
+    const { store, dir, engine } = rig(slate, 0, registry, livePipe);
+    const row = await store.schedule({ ...ENTRY, streamUrl: 'http://x/sports-arena.ts' });
+    if (row === null) throw new Error('not scheduled');
+    engine.start(row);
+    await engine.whenSettled(row.id);
+    expect(await store.byId(row.id)).toMatchObject({
+      status: 'FAILED',
+      sizeBytes: 0,
+      failReason: 'Provider allows one stream at a time',
+    });
+    expect(dir.files.has('cap.ts')).toBe(false);
+    expect(registry.state.kind).toBe('Limited');
   });
 });

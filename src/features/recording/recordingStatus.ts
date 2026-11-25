@@ -26,6 +26,23 @@ export function recordingStatus(row: Pick<RecordingRow, 'status'>): RecordingSta
   return statusOf(row.status);
 }
 
+/** Why a capture on a one-stream provider is FAILED (the `Provider stream limit` registry's verdict). */
+export const RECORDING_LIMIT_REASON = 'Provider allows one stream at a time';
+
+/** Web-only: why a FAILED row gave up, stored beside the row (Dexie keeps undeclared fields). */
+export interface RecordingFailure {
+  failReason?: string;
+}
+
+/** The row as the recording slice writes and reads it: the Android columns plus the failure reason. */
+export function withFailure(row: RecordingRow): RecordingRow & RecordingFailure {
+  return row;
+}
+
+export function failReasonOf(row: RecordingRow): string | null {
+  return withFailure(row).failReason ?? null;
+}
+
 /** SCHEDULED or RECORDING: the slot is claimed. */
 export function isPlanned(status: RecordingStatus): boolean {
   return status === 'SCHEDULED' || status === 'RECORDING';

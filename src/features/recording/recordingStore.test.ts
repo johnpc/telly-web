@@ -76,4 +76,21 @@ describe('RecordingStore', () => {
     await store.removeAll();
     expect(await store.all()).toEqual([]);
   });
+
+  it('a FAILED row can say why, and the reason rides along with the row', async () => {
+    const store = storeAt(9);
+    const row = await store.schedule(entryOf());
+    if (row === null) throw new Error('not scheduled');
+    await markStarted(store, row.id);
+    expect(await fail(store, row.id, 0, 'Provider allows one stream at a time')).toBe(true);
+    expect(await store.byId(row.id)).toMatchObject({
+      status: 'FAILED',
+      failReason: 'Provider allows one stream at a time',
+    });
+    // Not in `from`: nothing written, no reason either.
+    expect(await fail(store, row.id, 0, 'again')).toBe(false);
+    expect((await store.byId(row.id)) as { failReason?: string }).toMatchObject({
+      failReason: 'Provider allows one stream at a time',
+    });
+  });
 });

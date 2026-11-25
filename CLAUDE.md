@@ -110,7 +110,9 @@ npm run quality             # full gate (what CI runs)
 npm test                    # unit tests
 npm run e2e                 # Gherkin acceptance (builds fixtures, serves them, runs Playwright)
 E2E_TAG=tv-guide npm run e2e  # one feature area
+npm run e2e:throttled       # the buffer-gate leg: fixture streams paced at real-time rate + 2 s pre-roll (needs 8090 free: it starts its own paced server)
 npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:8090
+FIXTURE_THROTTLE=realtime FIXTURE_PREROLL_SEC=2 npm run fixtures:serve   # the same site as a ~1× provider pipe
 node scripts/measure-playback.mjs <base> '<proxyBase>' 90   # live-playback health probe (see below)
 ```
 
@@ -119,7 +121,10 @@ against the real provider before and after, twice each (cold line after > 60 s
 idle, then warm): the bar is 0 rebuffers, 0 stalled seconds, 0 dropped frames
 over 90 s. CI's fixture server bursts from disk and cannot see a 1× pipe; the
 `playback-throttled` acceptance leg serves the fixture at real-time rate as the
-automated stand-in.
+automated stand-in (`npm run e2e:throttled`: `serve.mjs` paces every `.ts` body at
+its PCR bitrate after a 2 s pre-roll burst; the scenarios prove the first frame
+waits for the runway, the burst does not start playback, and 30 s play without
+a `waiting` event).
 
 ## Definition of done (per slice)
 
@@ -298,3 +303,93 @@ automated stand-in.
   `platformBack()` — and shows the web `Exited` route only when no platform
   took it. Store accounts, certificates and device testing are the owner's
   manual steps, listed in each recipe.
+- **2026-11-24** Provider concurrent-stream awareness (director item 5).
+  Measured on the real provider through the relay: the line allows ONE
+  stream — with two or three concurrent connections only one receives real
+  data (19 MB in 8 s); every other connection gets HTTP 200 with an identical
+  ~710 KB body that then ends (a "too many connections" slate), so a second
+  multiview pane or a recording started while watching showed a short slate,
+  Ended, and looped on the reconnector. Android has no comparable message
+  (its multiview teaser says only "Your IPTV provider may limit the number of
+  concurrent connections"), so this is a documented web honesty. (1) ONE
+  owner for the fact: `Provider stream limit`
+  (`src/core/player/connection/streamConcurrency.ts`, Unknown · Suspected ·
+  Limited(host, since) · Cleared): every live stream the app opens registers
+  — engine tunes through `StreamSlot`, DVR captures from their first response
+  — where "live" is the engine's own `isLivePipe` rule (the tune says live AND
+  the server sent no Content-Length), so finite files never count. A live
+  stream reaching Ended or Error within 20 s of opening while another live
+  stream from the same PROVIDER host is open (proxied URLs are unwrapped)
+  ⇒ Limited; a concurrent pair that outlives 20 s, or 10 minutes, clears it.
+  (2) Consumers: the engine surfaces the terminal Error whose message is
+  "Your provider allows one stream at a time" instead of arming a retry, and
+  refuses a tune that would be a second stream on a Limited host before it
+  connects; the
+  multiview pane shows that line on black (no modal, remote needs nothing);
+  the recorder marks the row FAILED with "Provider allows one stream at a
+  time" (`failReason`, stored beside the row, shown as "Failed · …") and
+  deletes the slate file instead of keeping a tiny "successful" capture.
+  Fullscreen single playback is unaffected. (3) Hermetic reproduction:
+  `e2e/steps/streamLimit.steps.ts` routes the five channel clips to a tiny
+  provider on 127.0.0.1:8091 that answers chunked without a length (a
+  `route.fulfill` always adds a Content-Length, which reads as a finite file);
+  the first clip holds the line, every other clip gets the first ~150 KB
+  (≈5 s at the fixture's 29 KB/s — the real slate is ≈0.8 s of a 0.9 MB/s
+  stream) and ends. The line is keyed by URL, not socket, so the
+  fullscreen → multiview hand-over on the same URL is not modelled.
+- **2026-11-24** The zap wait feels intentional (director items 1 and 9). (1) **Never
+  black while the gate holds.** Every transport clears the element's source when it
+  stops, so a channel change went black for the whole 6–12 s runway. `FrameHold`
+  (`src/core/player/video/frameHold.ts`, catalog row `Zap frame hold`) draws the last
+  frame onto a canvas stacked over the `<video>` (the surface host is a one-cell grid,
+  both children `grid-area: 1 / 1`, so the canvas needs no positioned host and rides
+  along to the guide preview) right before `StreamSession.tune` stops the old
+  transport, and drops it the moment the connection state leaves Buffering /
+  Reconnecting. A first tune has nothing to hold, so the playback chrome shows a dark
+  card with the channel logo + name instead. (2) **Runway progress** is one observable
+  (`RunwayStore`, row `Runway progress`) the `BufferGate` alone writes on every check
+  (`{ ahead, need }`, `need` 0 = no gate attached); the engine hands it to each tune
+  through `LoadOptions.runway`, `zapWait.ts` derives the thin bar + "Buffering · 3 s of
+  6 s" label at the top centre (the one band no overlay uses; informational, never
+  focusable). (3) **One gate for every transport**: hls.js and the native element
+  attach the same `BufferGate` per tune, so Settings → Playback → Buffer size means
+  the same thing for `.ts`, HLS and MP4; hls.js keeps its own `maxBufferLength`, the
+  gate only decides when the element may play, and a finite file — or a live HLS
+  playlist buffered to its edge — plays out below the runway. (4) **Seeing the hold in
+  acceptance**: the fixture bursts from disk, so the web-only `watch-and-zap`
+  scenarios slow Chromium's network (CDP `Network.emulateNetworkConditions`, 32 KB/s ≈
+  1.1× the fixture bitrate) from the first stream request after the document's `load`,
+  lifting it again at every navigation commit; a zap goes to channel 7 because channel
+  2 shares channel 1's stream URL and a same-URL load is the engine's hand-over no-op.
+  Live probe through the relay, 90 s: before 0 rebuffers / 0 stalled / 0 dropped (×2,
+  runway 1.5–8.2 s), after 0 / 0 / 76 dropped — and the untouched before-build
+  re-measured minutes later dropped 70 too, so the drops are the hour's machine /
+  line state, not the change (0 rebuffers, 0 stalled, runway 3.9–8.0 s after).
+- **2026-11-24** Director items 2, 3, 4 and 8. (1) **Buffer size speaks in
+  seconds** (`src/features/settings/bufferSizeCopy.ts`, the ONE source, reading
+  `thresholdsFor`): row summary "Small · 6 s before a channel starts, for good
+  lines", options "Medium — 8 s to start, for jittery lines", "Large — 12 s to
+  start, for lines that stall". (2) **Deep links**: `?channel=<number | name |
+unique prefix>` tunes that channel on launch (`src/app/deepLink.ts`, folded into
+  the Start route row), works under the Pages base path and beside `?e2e=1`, is
+  stripped from the address bar with `history.replaceState` so a reload does not
+  re-tune; an unknown channel takes the normal start route and shows a 5 s
+  "No channel named X" notice (`StartNoticeScreen`, the guide-toast treatment —
+  there was no app-wide toast before). (3) **"telly was updated" toast**
+  (`src/platform/pwaUpdate.ts`, Current · UpdateReady · Reloading): the service
+  worker is registered as `sw.js?v=<hash of the start document's asset refs>`, the
+  running page re-reads the deployed document every 15 min and on becoming visible,
+  a new hash installs a waiting worker and a focused toast offers OK = reload (the
+  page posts `skipWaiting`, reloads on `controllerchange`) / BACK = later; it is
+  deferred while Boot, Playback, VOD or Multiview is on screen so it never steals
+  a key from video. `sw.js` no longer calls `skipWaiting` at install — one
+  mechanism. (4) **`playback-throttled` acceptance leg**: `FIXTURE_THROTTLE=realtime`
+  makes `e2e/fixtures/serve.mjs` pace every `*.ts` body at `size ÷ PCR span` in
+  188-byte chunks against the wall clock, `FIXTURE_PREROLL_SEC=2` imitates the
+  provider's pre-roll burst, and the leg's Background reads `X-Fixture-Throttle` so
+  a reused unpaced server fails loudly; scenarios prove the first frame waits for
+  the runway, a pre-roll burst does not start playback early, and 30 s play with
+  zero `waiting` events. `npm run e2e:throttled` locally (needs 8090 free).
+  The player seam is now grouped by concern (`engine/ transport/ probe/ gate/
+connection/ telemetry/ video/`) and `scripts/measure-playback.mjs` is the
+  documented live probe to run after any player change.

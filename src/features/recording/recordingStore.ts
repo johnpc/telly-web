@@ -1,7 +1,7 @@
 import { RecordingRepository, type RecordingImport } from '@/core/db/recordingRepository';
 import { type TellyDb, tellyDb } from '@/core/db/tellyDb';
 import type { RecordingRow } from '@/core/db/types';
-import { LIVE_STATUSES, statusOf } from './recordingStatus';
+import { LIVE_STATUSES, statusOf, withFailure } from './recordingStatus';
 
 /**
  * Dexie-backed state of the DVR (Android `RecordingStore`): inserts entries
@@ -59,6 +59,16 @@ export class RecordingStore {
       .equals(id)
       .and((row) => LIVE_STATUSES.includes(statusOf(row.status)))
       .modify({ sizeBytes });
+  }
+
+  /** Why a FAILED row gave up (web-only, stored beside the row; read by `failReasonOf`). */
+  setFailReason(id: number, reason: string): Promise<number> {
+    return this.db.recordings
+      .where('id')
+      .equals(id)
+      .modify((row) => {
+        withFailure(row).failReason = reason;
+      });
   }
 
   remove(id: number): Promise<void> {

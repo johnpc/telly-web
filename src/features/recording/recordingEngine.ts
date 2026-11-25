@@ -1,8 +1,10 @@
 import type { RecordingRow } from '@/core/db/types';
-import { runAttempts } from './captureAttempts';
-import { type Capture, countingSink, defaultFetch } from './captureContext';
+import type { StreamConcurrency } from '@/core/player';
+import { type AttemptsOutcome, runAttempts } from './captureAttempts';
+import { type Capture, countingSink, defaultFetch, warnAttempt } from './captureContext';
 import type { RecordingFiles } from './recordingFiles';
 import type { RecordingStore } from './recordingStore';
+import { RECORDING_LIMIT_REASON } from './recordingStatus';
 import { complete, fail, markStarted, markStopping } from './recordingStoreTransitions';
 import { type FetchLike, type StreamRecorder, recordStream } from './streamRecorder';
 
@@ -16,14 +18,17 @@ export interface RecordingEngineDeps {
   retryDelayMs?: number;
   /** How often the growing `sizeBytes` is written back to the row. */
   sizeUpdateMs?: number;
+  /** The `Provider stream limit` registry shared with the engines; default the app's one instance. */
+  concurrency?: StreamConcurrency | undefined;
 }
 
 /**
  * Runs the actual captures (Android `RecordingEngine`): one copy loop per
  * active recording, re-connecting when a live source drops, finishing the
  * row as DONE (planned end reached or user stop) or FAILED (three attempts
- * in a row wrote nothing, or a fetch error with nothing on disk). The
- * injected clock is the only time source.
+ * in a row wrote nothing, a fetch error with nothing on disk, or the
+ * provider's one-stream line refused the capture — then the slate it sent is
+ * not kept and the row says why). The injected clock is the only time source.
  */
 export class RecordingEngine {
   private readonly active = new Map<number, Capture>();
@@ -79,47 +84,43 @@ export class RecordingEngine {
       () => capture.controller.abort(),
       Math.max(0, row.plannedEndMs - this.deps.clock()),
     );
+    let outcome: AttemptsOutcome = 'Completed';
     try {
-      await this.copyLoop(row, capture);
+      outcome = await this.copyLoop(row, capture);
     } catch (error: unknown) {
       // No OPFS (or the file could not be opened): the row fails from what is on disk.
-      this.warn(row, capture, error);
+      warnAttempt(row, capture, error);
     } finally {
       clearTimeout(endTimer);
-      await this.finish(row);
+      await this.finish(row, outcome);
     }
   }
 
   /** Opens the capture file, runs the attempts, and closes the file whatever happened. */
-  private async copyLoop(row: RecordingRow, capture: Capture): Promise<void> {
+  private async copyLoop(row: RecordingRow, capture: Capture): Promise<AttemptsOutcome> {
     const { store, clock } = this.deps;
     const writable = await this.deps.files.open(row.filePath);
     const report = (bytes: number): void => void store.updateSize(row.id, bytes);
     const sink = countingSink(capture, writable, report, clock, this.deps.sizeUpdateMs ?? 1_000);
     try {
-      await runAttempts(row.streamUrl, capture, sink, {
+      return await runAttempts(row.streamUrl, capture, sink, {
         clock,
         fetch: this.deps.fetch ?? defaultFetch,
         recorder: this.deps.recorder ?? recordStream,
         retryDelayMs: this.deps.retryDelayMs ?? 1_000,
-        onError: (error) => this.warn(row, capture, error),
+        onError: (error) => warnAttempt(row, capture, error),
+        concurrency: this.deps.concurrency,
       });
     } finally {
       await writable.close();
     }
   }
 
-  /** A stop-aborted fetch ends the attempt normally; anything else is logged with its message. */
-  private warn(row: RecordingRow, capture: Capture, error: unknown): void {
-    if (capture.controller.signal.aborted) return;
-    const message = error instanceof Error ? error.message : String(error);
-    console.warn(`recording ${row.id} (${row.channelName}) attempt failed: ${message}`);
-  }
-
-  /** DONE when bytes landed on disk, FAILED otherwise. */
-  private async finish(row: RecordingRow): Promise<void> {
+  /** DONE when bytes landed on disk, FAILED otherwise; a refused capture keeps no slate file and says why. */
+  private async finish(row: RecordingRow, outcome: AttemptsOutcome = 'Completed'): Promise<void> {
+    if (outcome === 'Limited') await this.deps.files.delete(row.filePath);
     const size = await this.deps.files.sizeOf(row.filePath);
     if (size > 0) await complete(this.deps.store, row.id, size);
-    else await fail(this.deps.store, row.id, size);
+    else await fail(this.deps.store, row.id, size, outcome === 'Limited' ? RECORDING_LIMIT_REASON : null);
   }
 }

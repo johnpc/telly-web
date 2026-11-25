@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { StreamConcurrency } from '@/core/player';
 import { MAX_IDLE_ATTEMPTS, runAttempts } from './captureAttempts';
 import type { Capture } from './captureContext';
 import { bytes } from './recordingTestSupport';
@@ -87,5 +88,78 @@ describe('runAttempts', () => {
       onError: vi.fn(),
     });
     expect(recorder).not.toHaveBeenCalled();
+  });
+
+  /** The capture's own fetch: a live pipe (no Content-Length) or a finite file. */
+  const responding =
+    (headers: HeadersInit) =>
+    (url: string): Promise<Response> =>
+      Promise.resolve(new Response(url, { headers }));
+
+  /** An attempt that reads its URL once and copies a chunk — the slate shape: bytes, then the end. */
+  const slateRecorder: StreamRecorder = async (url, s, ctx) => {
+    await ctx.fetch(url);
+    await s.write(bytes(1));
+    return 1;
+  };
+
+  function limitRig(headers: HeadersInit = {}): { registry: StreamConcurrency; run: () => Promise<string> } {
+    const registry = new StreamConcurrency(
+      () => 0,
+      () => undefined,
+    );
+    const capture = captureOf();
+    // The slate shape once; a source that keeps yielding would (rightly) never end the loop on its own.
+    const recorder = vi.fn<StreamRecorder>(async (url, s, ctx) => {
+      if (recorder.mock.calls.length > 1) return 0;
+      const written = await slateRecorder(url, s, ctx, { lastSequence: -1, initWritten: false });
+      capture.bytes += written;
+      return written;
+    });
+    const run = (): Promise<string> =>
+      runAttempts('http://provider.example/live/2.ts', capture, sink, {
+        clock: () => 0,
+        fetch: responding(headers),
+        recorder,
+        retryDelayMs: 0,
+        onError: vi.fn(),
+        concurrency: registry,
+      });
+    return { registry, run };
+  }
+
+  it('a live pipe that ends inside the slate window while another live stream of the host is open is Limited', async () => {
+    const { registry, run } = limitRig();
+    registry.open('http://provider.example/live/1.ts', true);
+    expect(await run()).toBe('Limited');
+    expect(registry.state).toMatchObject({ kind: 'Limited', host: 'provider.example' });
+  });
+
+  it('a finite file (Content-Length), or a line nobody else is on, runs the loop to its normal end', async () => {
+    const finite = limitRig({ 'content-length': '1756484' });
+    finite.registry.open('http://provider.example/live/1.ts', true);
+    expect(await finite.run()).toBe('Completed');
+    expect(finite.registry.state.kind).toBe('Unknown');
+    const alone = limitRig();
+    expect(await alone.run()).toBe('Completed');
+  });
+
+  it('a host already known to be Limited refuses a second stream without a single fetch', async () => {
+    const { registry, run } = limitRig();
+    registry.open('http://provider.example/live/1.ts', true);
+    registry.open('http://provider.example/live/3.ts', true).close('Ended');
+    const fetched = vi.fn();
+    const capture = captureOf();
+    const outcome = await runAttempts('http://provider.example/live/2.ts', capture, sink, {
+      clock: () => 0,
+      fetch: fetched,
+      recorder: vi.fn<StreamRecorder>(),
+      retryDelayMs: 0,
+      onError: vi.fn(),
+      concurrency: registry,
+    });
+    expect(outcome).toBe('Limited');
+    expect(fetched).not.toHaveBeenCalled();
+    void run;
   });
 });

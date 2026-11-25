@@ -1,3 +1,4 @@
+import type { RecordingRow } from '@/core/db/types';
 import type { RecordingWritable } from './recordingFiles';
 import type { CaptureContext, CaptureSink, FetchLike } from './streamRecorder';
 
@@ -57,6 +58,13 @@ export function captureContext(capture: Capture, clock: () => number, fetchImpl:
     shouldStop: () => capture.stopped || clock() >= capture.plannedEndMs,
     delay: (ms) => abortableDelay(ms, signal),
   };
+}
+
+/** A stop-aborted fetch ends the attempt normally; anything else is logged with its message. */
+export function warnAttempt(row: RecordingRow, capture: Capture, error: unknown): void {
+  if (capture.controller.signal.aborted) return;
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn(`recording ${row.id} (${row.channelName}) attempt failed: ${message}`);
 }
 
 export const defaultFetch: FetchLike = (input, init) => fetch(input, init);

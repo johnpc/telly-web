@@ -56,6 +56,8 @@ jobs:
             recording,
             block-channel,
             catch-up,
+            playback-throttled,
+            multiview,
           ]
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +72,10 @@ jobs:
         run: npx bddgen && npx playwright test
         env:
           E2E_TAG: ${{ matrix.feature }}
+          # The playback-throttled leg's fixture server paces streams at real-time rate
+          # with a 2 s pre-roll burst (see e2e/fixtures/serve.mjs); every other leg bursts from disk.
+          FIXTURE_THROTTLE: ${{ matrix.feature == 'playback-throttled' && 'realtime' || '' }}
+          FIXTURE_PREROLL_SEC: ${{ matrix.feature == 'playback-throttled' && '2' || '0' }}
       - name: Upload acceptance artifacts
         if: failure()
         uses: actions/upload-artifact@v4

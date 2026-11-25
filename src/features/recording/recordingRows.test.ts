@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { CLOCK_12H, CLOCK_24H } from '@/core/time';
 import { durationText, recordingLabel, recordingRowId, recordingRows } from './recordingRows';
 import { fakeRecording } from './recordingTestSupport';
+import { withFailure as asFailure } from './recordingStatus';
+
+/** A FAILED row carrying its reason, the way the store writes it. */
+function withFailure(
+  row: ReturnType<typeof fakeRecording>,
+  failReason: string,
+): ReturnType<typeof fakeRecording> {
+  const failed = asFailure(row);
+  failed.failReason = failReason;
+  return failed;
+}
 
 const START = Date.UTC(2026, 8, 13, 14, 45);
 const utc = (style: typeof CLOCK_12H): typeof CLOCK_12H => ({ ...style, timeZone: 'UTC' });
@@ -29,6 +40,10 @@ describe('recordingRows', () => {
           sizeBytes: 0,
         }),
         fakeRecording({ id: 6, status: 'bogus', startMs: START }),
+        withFailure(
+          fakeRecording({ id: 7, status: 'FAILED', startMs: START }),
+          'Provider allows one stream at a time',
+        ),
       ],
       utc(CLOCK_12H),
     );
@@ -39,6 +54,7 @@ describe('recordingRows', () => {
       '42 min · 12.3 MB',
       '1 min · 0 B',
       'Failed',
+      'Failed · Provider allows one stream at a time',
     ]);
     expect(rows[0]?.dateText).toBe('Sun, Sep 13, 2:45 PM');
     expect(rows[0]?.status).toBe('SCHEDULED');

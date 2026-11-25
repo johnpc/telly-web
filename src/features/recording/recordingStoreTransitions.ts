@@ -23,9 +23,16 @@ export function complete(store: RecordingStore, id: number, sizeBytes: number): 
   return finish(store, LIVE_STATUSES, 'DONE', id, sizeBytes);
 }
 
-/** RECORDING | STOPPING -> FAILED (the copy gave up before writing anything). */
-export function fail(store: RecordingStore, id: number, sizeBytes = 0): Promise<boolean> {
-  return finish(store, LIVE_STATUSES, 'FAILED', id, sizeBytes);
+/** RECORDING | STOPPING -> FAILED (the copy gave up before writing anything), with why when there is a why. */
+export async function fail(
+  store: RecordingStore,
+  id: number,
+  sizeBytes = 0,
+  reason: string | null = null,
+): Promise<boolean> {
+  const failed = await finish(store, LIVE_STATUSES, 'FAILED', id, sizeBytes);
+  if (failed && reason !== null) await store.setFailReason(id, reason);
+  return failed;
 }
 
 /** SCHEDULED -> FAILED (the start window passed while telly was not open). */

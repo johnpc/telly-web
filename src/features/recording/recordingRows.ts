@@ -1,7 +1,7 @@
 import type { RecordingRow } from '@/core/db/types';
 import { type ClockStyle, CLOCK_12H, clockText } from '@/core/time';
 import { sizeText } from '@/features/settings/rows/otherRows';
-import { type RecordingStatus, recordingStatus } from './recordingStatus';
+import { type RecordingStatus, failReasonOf, recordingStatus } from './recordingStatus';
 
 /** One library row: the entry plus its render-ready texts (Android `RecordingRow`). */
 export interface RecordingListRow {
@@ -9,7 +9,7 @@ export interface RecordingListRow {
   status: RecordingStatus;
   /** "Sun, Sep 13, 2:45 PM" — the (planned) start, shared clock format. */
   dateText: string;
-  /** Status detail: "Scheduled" / "Recording" / "42 min · 12.3 MB" / "Failed". */
+  /** Status detail: "Scheduled" / "Recording" / "42 min · 12.3 MB" / "Failed" (· why, when the capture was refused). */
   detailText: string;
 }
 
@@ -38,8 +38,10 @@ function detailOf(entry: RecordingRow, status: RecordingStatus): string {
       return 'Recording';
     case 'STOPPING':
       return 'Stopping';
-    case 'FAILED':
-      return 'Failed';
+    case 'FAILED': {
+      const reason = failReasonOf(entry);
+      return reason === null ? 'Failed' : `Failed · ${reason}`;
+    }
     case 'DONE':
       return `${durationText(entry.startMs, entry.endMs ?? entry.plannedEndMs)} · ${sizeText(entry.sizeBytes)}`;
   }

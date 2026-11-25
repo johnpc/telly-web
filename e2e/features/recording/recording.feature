@@ -92,3 +92,18 @@ Feature: Record live TV to disk and manage recordings (DVR)
     And I see "Scheduled recordings start only while telly is running"
     When I activate "Delete all recordings"
     Then I see "Delete all recordings?"
+
+  # Web honesty (decisions log 2026-11-24): the real provider's line carries ONE
+  # stream; a capture started while watching gets a short slate that ends. The
+  # recorder registers in `Provider stream limit`, so the row is FAILED with the
+  # reason instead of a tiny "successful" slate file. The hermetic one-stream
+  # provider is in e2e/steps/streamLimit.steps.ts (it keys the line by URL, so
+  # the second stream is a different channel than the one on screen).
+  Scenario: Recording a second stream on a one-stream provider fails the row honestly
+    Given the provider allows one stream at a time
+    When I open the channel panel
+    And I long-press ok on the row "Sports Arena"
+    And I select "Record"
+    And I open the recordings library
+    Then the recordings library shows a recording of "Sports Arena"
+    And the recording shows the "Failed · Provider allows one stream at a time" state
