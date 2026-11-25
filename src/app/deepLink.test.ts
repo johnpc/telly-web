@@ -96,6 +96,23 @@ describe('matchChannel', () => {
     expect(matchChannel(CHANNELS, 'Nope')).toBeNull();
     expect(matchChannel([], '1')).toBeNull();
   });
+  it('ignores a provider country/group tag and matches a unique whole word, but not an ambiguous one', () => {
+    const tagged = [
+      channel(1, 'US: CNN'),
+      channel(2, 'US CNN (A)'),
+      channel(3, 'UK | BBC One'),
+      channel(4, 'CA - CBC News'),
+    ];
+    expect(matchChannel(tagged, 'cnn')?.number).toBe(1);
+    expect(matchChannel(tagged, 'BBC One')?.number).toBe(3);
+    expect(matchChannel(tagged, 'cbc')?.number).toBe(4);
+    expect(matchChannel(tagged, 'news')?.number).toBe(4);
+    expect(
+      matchChannel([channel(1, 'US: CNN'), channel(2, 'CNN International')], 'international')?.number,
+    ).toBe(2);
+    expect(matchChannel([channel(1, 'Fox News'), channel(2, 'Sky News')], 'news')).toBeNull();
+    expect(matchChannel([channel(1, 'Newsmax'), channel(2, 'Newsy')], 'news')).toBeNull();
+  });
   it('falls through to names when a numeric query is a channel name, not a number', () => {
     expect(matchChannel([channel(5, '24')], '24')?.number).toBe(5);
   });
