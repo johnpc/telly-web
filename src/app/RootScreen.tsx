@@ -7,10 +7,12 @@ import { SoftRemote } from '@/core/ui/SoftRemote';
 import { RecordingsHost } from '@/features/recording';
 import { RemindersHost } from '@/features/reminders';
 import { ScreenStackScreen } from './ScreenStackScreen';
+import { StartNoticeScreen } from './StartNoticeScreen';
 import { useApplyAppearance, useConfigAutoBackup } from '@/features/settings';
 import { useBackgroundRefresh } from './useBackgroundRefresh';
 import { useStartRoute } from './useStartRoute';
 import { exitToPlatform } from '@/platform/exit';
+import { PwaUpdateToastScreen } from '@/platform/PwaUpdateToastScreen';
 
 /** Hosts the route stack's screens; BACK at the root exits: to the TV on webOS/Tizen, else the `Exited` route. */
 export function RootScreen(): JSX.Element {
@@ -32,6 +34,8 @@ export function RootScreen(): JSX.Element {
       </FocusScope>
       <RemindersHost />
       <RecordingsHost />
+      <PwaUpdateToastScreen />
+      <StartNoticeScreen />
       <SoftRemote />
     </RemoteKeysProvider>
   );

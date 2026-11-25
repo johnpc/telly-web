@@ -2,7 +2,7 @@
 // welcome-screen restore of a previous install's automatic backup. Every
 // action is a key; the backup is seeded through the same OPFS seam the app
 // writes with (the Android harness seeds Documents/telly the same way).
-import { Given, Then, FIXTURE_HOST, expect } from './world';
+import { Given, Then, When, FIXTURE_HOST, expect } from './world';
 
 /** The OPFS backup seam on `window.telly` (`src/features/onboarding/onboardingTestHooks.ts`). */
 type TellyWindow = Window & { telly: { writeAutoBackup(json: string): Promise<void> } };
@@ -44,3 +44,31 @@ Then(
     }
   },
 );
+
+/**
+ * Launch links (web-only): the app is opened with `?channel=…` ON TOP of the
+ * harness's own `?e2e=1`, then settles past the Boot frame like a relaunch.
+ * Opening a URL is the deep link itself, not a pointer action.
+ */
+When('I open telly with the link {string}', async ({ world }, link: string) => {
+  const params = new URLSearchParams(link);
+  params.set('e2e', '1');
+  await world.page.goto(`/?${params.toString()}`);
+  const root = world.page.getByTestId('app-root');
+  await expect(root).toBeVisible();
+  await expect(root).not.toHaveAttribute('data-route', 'Boot');
+});
+
+/** The channel is known to the player (route + tuned attributes), without waiting for pictures. */
+Then('telly is tuned to channel {int} {string}', async ({ world }, number: number, name: string) => {
+  const { page } = world;
+  await expect(page.getByTestId('app-root')).toHaveAttribute('data-route', 'Playback');
+  await expect(page.getByTestId('playback-screen')).toHaveAttribute('data-channel-number', String(number));
+  await expect(page.getByTestId('playback-screen')).toHaveAttribute('data-channel-name', name);
+});
+
+/** `?channel=` was stripped by `history.replaceState`; the harness's `?e2e=1` survived it. */
+Then('the address bar no longer carries the channel link', async ({ world }) => {
+  await expect(world.page).not.toHaveURL(/[?&]channel=/);
+  expect(new URL(world.page.url()).searchParams.get('e2e')).toBe('1');
+});

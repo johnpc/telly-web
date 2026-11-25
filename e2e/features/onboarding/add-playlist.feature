@@ -75,3 +75,27 @@ Feature: Add playlist onboarding
     Then I see "Playlist type"
     When I press back
     Then I see "telly doesn't provide any sources of TV channels"
+
+  # Web-only launch link: `https://telly.jpc.io/?channel=<number | name | unique
+  # name prefix>` tunes that channel straight into fullscreen playback — number
+  # first, then the exact name (case-insensitive), then a unique prefix — and
+  # is stripped from the address bar so a reload does not re-tune. The same
+  # link works on the GitHub Pages base path and alongside `?e2e=1`.
+  Scenario: A channel link tunes the named channel straight into fullscreen playback
+    Given I added the playlist "http://127.0.0.1:8090/playlist.m3u"
+    When I open telly with the link "?channel=Movie House"
+    Then playback goes fullscreen on channel 13 "Movie House"
+    And the address bar no longer carries the channel link
+
+  Scenario: A channel link also takes a channel number or a unique name prefix
+    Given I added the playlist "http://127.0.0.1:8090/playlist.m3u"
+    When I open telly with the link "?channel=3"
+    Then telly is tuned to channel 3 "News One +1"
+    When I open telly with the link "?channel=movie house e"
+    Then telly is tuned to channel 16 "Movie House Extra"
+
+  Scenario: A channel link naming no channel lands on the normal start route with a notice
+    Given I added the playlist "http://127.0.0.1:8090/playlist.m3u"
+    When I open telly with the link "?channel=Nope"
+    Then telly is tuned to channel 1 "News One"
+    And I see "No channel named Nope"

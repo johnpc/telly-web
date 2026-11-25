@@ -7,8 +7,9 @@ import { useAppDeps } from './appContext';
 
 /**
  * Boot → first real route, once the channel count resolves (never before:
- * the Boot frame is bare so no interstitial flashes). Later route changes
- * are the navigator's business.
+ * the Boot frame is bare so no interstitial flashes). A `?channel=` launch
+ * link also waits for the visible channel list it is matched against; a
+ * plain start never does. Later route changes are the navigator's business.
  */
 export function useStartRoute(): void {
   const navigator = useNavigator();
@@ -17,6 +18,14 @@ export function useStartRoute(): void {
   const count = useLiveQuery(() => channelRepository.totalCount(), []);
   useEffect(() => {
     if (route.kind !== 'Boot' || count === undefined) return;
-    navigator.replaceAll(startRoute.forChannelCount(count));
+    let live = true;
+    void startRoute
+      .resolve(count, () => channelRepository.visible())
+      .then((decision) => {
+        if (live) navigator.replaceAll(decision.route);
+      });
+    return () => {
+      live = false;
+    };
   }, [route.kind, count, navigator, startRoute]);
 }
