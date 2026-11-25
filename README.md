@@ -96,7 +96,11 @@ self-contained static site — playlist, EPG (+ `.gz`, + a second source), logos
 H.264/AAC MPEG-TS, HLS and MP4 streams — re-anchored to "now" per run, and
 `e2e/fixtures/serve.mjs` serves it on `127.0.0.1:8090` with CORS and Range exactly like
 GitHub Pages does for the public demo. Everything in `e2e/fixtures/` is public, synthetic
-content.
+content. One leg, `playback-throttled`, starts that server with `FIXTURE_THROTTLE=realtime
+FIXTURE_PREROLL_SEC=2` (`npm run e2e:throttled`): every `.ts` body is paced at the
+stream's own bitrate after a 2 s burst, like a real provider's ~1× pipe, so CI proves the
+buffer gate waits for its runway and plays on without rebuffering instead of only ever
+seeing a disk-speed burst.
 
 ### Parity with Android
 
