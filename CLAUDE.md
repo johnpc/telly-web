@@ -51,7 +51,7 @@ touch device a soft D-pad (`SoftRemote`) is offered so parity holds on a phone.
   (`src/core/db/`). `useLiveQuery` is the Room-`Flow` equivalent for UI reads.
 - **TanStack Query** for every network fetch (playlist / EPG / logos) — fetching,
   caching, mutations. No ad-hoc `useEffect` fetching.
-- **Player engine seam** (`src/core/player/PlayerEngine.ts`): `mpegts.js` for raw
+- **Player engine seam** (`src/core/player/engine/PlayerEngine.ts`): `mpegts.js` for raw
   MPEG-TS over HTTP, `hls.js` for HLS, native `<video>` for MP4/progressive. UI never
   touches a library directly.
 - **Client state**: Context + hook + provider per feature, in separate files. Logic
@@ -92,6 +92,9 @@ sometimes has a race — wait on a real condition, never a sleep; `retries: 0`.
   panel, search, settings, catchup, vod, multiview, recording, reminders, mylist,
   history, groups, pip, onboarding) + `src/core/` for design tokens, focus, input,
   navigation, db, kv, settings, player seam, shared UI.
+- The player seam is grouped by concern: `src/core/player/{engine,transport,probe,
+gate,connection,telemetry,video}/`; feature code imports only from
+  `src/core/player/index.ts`.
 - Components named `*Screen.tsx` are thin (render only). Hooks `use*.ts`. Logic
   `*.ts` with a sibling `*.test.ts`.
 - State is a discriminated union with ONE owner; every mode is a row in
@@ -108,7 +111,15 @@ npm test                    # unit tests
 npm run e2e                 # Gherkin acceptance (builds fixtures, serves them, runs Playwright)
 E2E_TAG=tv-guide npm run e2e  # one feature area
 npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:8090
+node scripts/measure-playback.mjs <base> '<proxyBase>' 90   # live-playback health probe (see below)
 ```
+
+**After any change under `src/core/player/`**, run `scripts/measure-playback.mjs`
+against the real provider before and after, twice each (cold line after > 60 s
+idle, then warm): the bar is 0 rebuffers, 0 stalled seconds, 0 dropped frames
+over 90 s. CI's fixture server bursts from disk and cannot see a 1× pipe; the
+`playback-throttled` acceptance leg serves the fixture at real-time rate as the
+automated stand-in.
 
 ## Definition of done (per slice)
 
@@ -230,7 +241,7 @@ npm run fixtures && npm run fixtures:serve   # demo/fixture site on 127.0.0.1:80
   3 s cap — the player seeked forward whenever more than 3 s accumulated, so a
   jittery IPTV pipe lived on ~1 s of buffer. Now, like Android/TiviMate: no
   chasing (the stream drifts at 1.0× over a deep buffer, source buffer trimmed
-  30–60 s behind the playhead), and a `BufferGate` (`src/core/player/bufferGate.ts`,
+  30–60 s behind the playhead), and a `BufferGate` (`src/core/player/gate/bufferGate.ts`,
   catalog row) ports Android's `PlayerTuning` runways from Settings → Playback →
   Buffer size — Small 1.5 s to start / 5 s to resume after an underrun, Medium
   2.5/5, Large 2.5/10; the gate's own pauses never count as the user's. After:

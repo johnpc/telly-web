@@ -1,7 +1,7 @@
 import type { RemoteKey } from '@/core/input/remoteKeys';
 import type { PlayerEngine } from '@/core/player';
-import { createTransport, extensionOf } from '@/core/player/createEngine';
-import type { EngineDeps } from '@/core/player/engineDeps';
+import { createTransport, extensionOf } from '@/core/player/transport/createEngine';
+import type { EngineDeps } from '@/core/player/engine/engineDeps';
 import { spanText } from '@/core/time';
 
 export const SEEK_STEP_MS = 10_000;
