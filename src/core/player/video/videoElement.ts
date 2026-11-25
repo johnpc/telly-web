@@ -2,6 +2,9 @@
 // re-parented between hosts (guide preview → fullscreen) so the stream never
 // re-tunes on a route change; React never renders it (see `VideoSurface`).
 // `data-testid` / `data-state` let Playwright wait on real playback state.
+// The host lays the element and the zap frame-hold canvas over each other
+// as grid items in one cell (`grid-area: 1 / 1`), so the frame of the
+// previous channel stays up while the next one builds its runway.
 
 export const VIDEO_TESTID = 'video-surface';
 
@@ -22,6 +25,9 @@ export function createVideoElement(doc: Document = document): HTMLVideoElement {
   video.dataset.state = 'Idle';
   video.style.width = '100%';
   video.style.height = '100%';
+  video.style.minWidth = '0';
+  video.style.minHeight = '0';
+  video.style.gridArea = '1 / 1';
   video.style.objectFit = 'contain';
   video.style.backgroundColor = 'black';
   return video;

@@ -7,6 +7,7 @@ import { NumberEntryPill, ReconnectingPill } from '../zap/ZapOverlayScreen';
 import { MenuLayers } from './MenuLayersScreen';
 import { OverlayLayer } from './OverlayLayerScreen';
 import { chromeAttrs, type PlaybackView, usePlaybackView } from './usePlaybackView';
+import { ZapWait } from './ZapWaitScreen';
 
 /** The number-entry pill, the reconnecting pill and the tune-gate PIN card, over whatever overlay is up. */
 function Pills({ view, ctl }: { view: PlaybackView; ctl: PlaybackController }): JSX.Element {
@@ -26,11 +27,12 @@ function Pills({ view, ctl }: { view: PlaybackView; ctl: PlaybackController }): 
   );
 }
 
-/** Everything over the video surface: the active overlay, the sheet layers and the pills. */
+/** Everything over the video surface: the zap wait (lowest), the active overlay, the sheet layers and the pills. */
 export function Chrome({ session, ctl }: { session: PlaybackSession; ctl: PlaybackController }): JSX.Element {
   const view = usePlaybackView(session, ctl);
   return (
     <div className="absolute inset-0" {...chromeAttrs(view)}>
+      <ZapWait view={view.zapWait} />
       <OverlayLayer view={view} ctl={ctl} session={session} />
       <MenuLayers view={view} ctl={ctl} session={session} />
       <Pills view={view} ctl={ctl} />

@@ -1,14 +1,14 @@
 // The web `PlayerEngine` (port of Android's `Media3PlayerEngine`): one
-// `<video>` reused across channel changes so the last frame stays up while
-// the next stream tunes; a transport per url behind `StreamTuner`; the
-// connection state written ONLY through the one store; auto-reconnect and
-// the stall watchdog recovering on the shared budget (`StreamSession`);
-// telemetry as a pure observer.
+// `<video>` reused across channel changes, its last frame held over the
+// element (`FrameHold`) while the next stream builds its runway; a transport
+// per url behind `StreamTuner`; the connection state written ONLY through
+// the one store; auto-reconnect and the stall watchdog recovering on the
+// shared budget (`StreamSession`); telemetry as a pure observer.
 import type { LoadOptions, PlayerEngine } from './PlayerEngine';
-import { scheduleOf, telemetryOf, tickerOf, type EngineDeps } from './engineDeps';
+import { scheduleOf, telemetryOf, thresholdsOf, tickerOf, type EngineDeps } from './engineDeps';
 import { ObservableEngine } from '../connection/engineObservable';
 import { EngineReconnector } from '../connection/engineReconnector';
-import { BUFFERING, ENDED, IDLE } from '../connection/engineState';
+import { BUFFERING, IDLE } from '../connection/engineState';
 import { wireVideo } from './engineWiring';
 import type { PlaybackTelemetry } from '../telemetry/playbackTelemetry';
 import { ReconnectPolicy } from '../connection/reconnectPolicy';
@@ -19,7 +19,6 @@ import { StreamTuner } from '../transport/streamTuner';
 import { TelemetryAnalytics } from '../telemetry/telemetryAnalytics';
 import { NO_TRACKS } from './trackModels';
 import { safePlay } from '../video/videoElement';
-import { type BufferThresholds, thresholdsFor } from '../gate/bufferGate';
 import { VideoFeed } from '../telemetry/videoFeed';
 
 export class WebPlayerEngine extends ObservableEngine implements PlayerEngine {
@@ -30,11 +29,9 @@ export class WebPlayerEngine extends ObservableEngine implements PlayerEngine {
   private readonly feed: VideoFeed;
   private readonly ticker: Ticker | null;
   private unwire: () => void = () => undefined;
-  private readonly bufferThresholds: () => BufferThresholds;
 
-  constructor(deps: EngineDeps) {
+  constructor(private readonly deps: EngineDeps) {
     super();
-    this.bufferThresholds = deps.bufferThresholds ?? ((): BufferThresholds => thresholdsFor('Small'));
     this.tuner = new StreamTuner(deps.transportFor);
     this.ticker = tickerOf(deps);
     this.telemetry = telemetryOf(deps);
@@ -45,10 +42,12 @@ export class WebPlayerEngine extends ObservableEngine implements PlayerEngine {
       reconnector: new EngineReconnector(deps.policy ?? new ReconnectPolicy(), scheduleOf(deps)),
       store: this.store,
       feed: this.feed,
+      frames: this.frames,
       telemetry: this.telemetry,
       videoOf: () => this.video,
       onTracks: (snapshot) => this.setTracks(snapshot),
       onTuned: (video) => this.start(video),
+      concurrency: deps.concurrency,
     });
   }
 
@@ -57,7 +56,7 @@ export class WebPlayerEngine extends ObservableEngine implements PlayerEngine {
     this.unwire = wireVideo(video, {
       onBuffering: () => this.store.set(BUFFERING),
       onReady: () => this.session.onReady(),
-      onEnded: () => this.store.set(ENDED),
+      onEnded: () => this.session.onEnded(),
       onError: (message) => this.session.fail(message),
       stateOf: () => this.state,
       onStall: () => this.session.onStall(),
@@ -69,7 +68,8 @@ export class WebPlayerEngine extends ObservableEngine implements PlayerEngine {
 
   /** Skips a re-load of the same stream (guide <-> fullscreen hand-over). */
   load(url: string, options: LoadOptions): void {
-    this.session.begin(url, { buffer: this.bufferThresholds(), ...options }, this.paused);
+    const filled = { buffer: thresholdsOf(this.deps), runway: this.runwayStore, ...options };
+    this.session.begin(url, filled, this.paused);
     this.setPaused(false);
   }
 

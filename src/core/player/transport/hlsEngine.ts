@@ -2,13 +2,21 @@
 // subtitle playlists as audio / text tracks; captions start Off like the
 // reference. `lowLatencyMode` is off: TiviMate never chases the live edge —
 // it just drifts behind — and neither does telly (Android pins live playback
-// speed to 1.0× for the same reason). Imported on first use.
+// speed to 1.0× for the same reason). The buffer gate is attached per tune
+// like every transport: hls.js keeps filling its own buffer (`maxBufferLength`
+// is untouched, far above any runway) while the gate only decides when the
+// element may play; a live playlist buffered to its edge counts as "all the
+// runway there is", so the gate never waits past what the edge can give.
+// Imported on first use.
 import type Hls from 'hls.js';
-import type { ErrorData } from 'hls.js';
 import type { LoadOptions } from '../engine/PlayerEngine';
-import { AUDIO_PREFIX, hlsDetails, indexOfId, LEVEL_PREFIX, mapHlsTracks, TEXT_PREFIX } from './hlsTracks';
+import { attachBufferGate } from '../gate/bufferGate';
+import { AUDIO_PREFIX, indexOfId, LEVEL_PREFIX, TEXT_PREFIX } from './hlsTracks';
+import { wireHls } from './hlsWiring';
 import { NO_TRACKS, type TrackSnapshot } from '../engine/trackModels';
 import type { Transport, TransportListener } from './transport';
+
+export { hlsErrorMessage } from './hlsWiring';
 
 export type HlsCtor = typeof Hls;
 export type HlsLoader = () => Promise<HlsCtor>;
@@ -23,44 +31,11 @@ export function hlsConfig(options: LoadOptions): Partial<Hls['config']> {
   };
 }
 
-export function hlsErrorMessage(data: ErrorData): string {
-  return `${data.type}/${data.details}`;
-}
-
-type HlsEvents = typeof Hls.Events;
-
-const TRACK_EVENTS = [
-  'MANIFEST_PARSED',
-  'LEVEL_SWITCHED',
-  'AUDIO_TRACKS_UPDATED',
-  'AUDIO_TRACK_SWITCHED',
-  'SUBTITLE_TRACKS_UPDATED',
-  'SUBTITLE_TRACK_SWITCH',
-] as const;
-
-/** Every track-shaping event refreshes the snapshot + details; fatal errors hit the budget. */
-function wireHls(
-  hls: Hls,
-  events: HlsEvents,
-  listener: TransportListener,
-  keep: (snapshot: TrackSnapshot) => void,
-): void {
-  const refresh = (): void => {
-    const snapshot = mapHlsTracks(hls);
-    keep(snapshot);
-    listener.onTracksChanged(snapshot);
-    listener.onDetails(hlsDetails(hls));
-  };
-  for (const name of TRACK_EVENTS) hls.on(events[name], refresh);
-  hls.on(events.ERROR, (_event, data) => {
-    if (data.fatal) listener.onError(hlsErrorMessage(data));
-  });
-}
-
 export class HlsTransport implements Transport {
   readonly kind = 'hls';
   private hls: Hls | null = null;
   private snapshot: TrackSnapshot = NO_TRACKS;
+  private detachGate: () => void = () => undefined;
   private generation = 0;
 
   constructor(private readonly loadLib: HlsLoader = importHls) {}
@@ -86,11 +61,14 @@ export class HlsTransport implements Transport {
     hls.loadSource(url);
     hls.attachMedia(video);
     this.hls = hls;
+    this.detachGate = attachBufferGate(video, options).detach;
   }
 
   stop(): void {
     this.generation += 1;
     this.snapshot = NO_TRACKS;
+    this.detachGate();
+    this.detachGate = () => undefined;
     const hls = this.hls;
     this.hls = null;
     if (hls === null) return;

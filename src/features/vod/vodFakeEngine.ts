@@ -18,6 +18,8 @@ export function fakeVodEngine(): FakeVodEngine {
   const engine: FakeVodEngine = {
     state: { kind: 'Idle' },
     paused: false,
+    runway: { ahead: 0, need: 0 },
+    heldFrame: { kind: 'Empty' },
     subscribe: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

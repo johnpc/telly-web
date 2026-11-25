@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HlsTransport, hlsConfig, hlsErrorMessage, type HlsCtor } from './hlsEngine';
+import { RunwayStore } from '../gate/runwayProgress';
+import { defineReadOnly, fakeTimeRanges, fire, stubMediaPlayback } from '../testSupport';
 import type { TransportListener } from './transport';
 
 const fake = vi.hoisted(() => {
@@ -58,8 +60,49 @@ describe('HlsTransport', () => {
   let video: HTMLVideoElement;
 
   beforeEach(() => {
+    stubMediaPlayback();
     fake.FakeHls.instances.length = 0;
     video = document.createElement('video');
+  });
+
+  it('gates the element like every transport: held until the runway, hls.js keeps buffering meanwhile', async () => {
+    const transport = new HlsTransport();
+    const runway = new RunwayStore();
+    const play = vi.spyOn(video, 'play');
+    const pause = vi.spyOn(video, 'pause');
+    defineReadOnly(video, 'paused', false);
+    defineReadOnly(video, 'buffered', fakeTimeRanges([[0, 1]]));
+    await transport.load(
+      video,
+      'http://s/live.m3u8',
+      { live: true, buffer: { runwaySec: 6 }, runway },
+      listener(),
+    );
+    expect(fake.FakeHls.instances[0]?.stopLoad).not.toHaveBeenCalled();
+    fire(video, 'play');
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(runway.get()).toEqual({ ahead: 1, need: 6 });
+    defineReadOnly(video, 'buffered', fakeTimeRanges([[0, 7]]));
+    fire(video, 'progress');
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(fake.FakeHls.instances[0]?.stopLoad).not.toHaveBeenCalled();
+    transport.stop();
+    expect(runway.get()).toEqual({ ahead: 0, need: 0 });
+    fire(video, 'waiting');
+    fire(video, 'progress');
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it('a live playlist buffered to its edge plays below the runway (never waits past what the edge gives)', async () => {
+    const transport = new HlsTransport();
+    const play = vi.spyOn(video, 'play');
+    defineReadOnly(video, 'paused', false);
+    defineReadOnly(video, 'duration', 18);
+    defineReadOnly(video, 'buffered', fakeTimeRanges([[0, 17.9]]));
+    video.currentTime = 15;
+    await transport.load(video, 'http://s/live.m3u8', { live: true, buffer: { runwaySec: 6 } }, listener());
+    fire(video, 'play');
+    expect(play).toHaveBeenCalledTimes(1);
   });
 
   it('builds hls.js lazily with low-latency off, captions off, and attaches', async () => {

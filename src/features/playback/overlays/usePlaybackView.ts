@@ -1,4 +1,4 @@
-import { type EngineState, type StreamDetails, useEngineState } from '@/core/player';
+import { type EngineState, type StreamDetails, useEngineState, useHeldFrame, useRunway } from '@/core/player';
 import type { ChannelRow } from '@/core/db/types';
 import { useCatchupInfo } from '@/features/catchup';
 import { playbackGate } from '../gate/playbackGate';
@@ -15,6 +15,7 @@ import type { TrackSource } from '../tracks/trackPickerRows';
 import { useTrackSource } from '../tracks/useTrackSource';
 import type { PlaybackSession } from '../tune/usePlaybackSession';
 import { useGatePrompt, useInstant, useNumberDigits, useOverlay } from '../usePlaybackStores';
+import { type ZapWaitView, zapWaitOf } from './zapWait';
 
 /** Everything the chrome renders, read from the controller's stores and the live queries in one place. */
 export interface PlaybackView {
@@ -30,6 +31,8 @@ export interface PlaybackView {
   info: PlaybackInfoData | null;
   recents: RecentCard[];
   source: TrackSource;
+  /** The wait for a tune's runway: held frame or channel card + "Buffering · 3 s of 6 s". */
+  zapWait: ZapWaitView;
 }
 
 export function usePlaybackView(session: PlaybackSession, ctl: PlaybackController): PlaybackView {
@@ -39,15 +42,17 @@ export function usePlaybackView(session: PlaybackSession, ctl: PlaybackControlle
   const clock = useClockStyle();
   const channel = session.playing?.channel ?? null;
   const details = useStreamDetails(engine, overlay.kind !== 'None');
+  const state = useEngineState(engine);
   return {
     overlay,
     instant,
     clock,
     channel,
     details,
+    state,
     prompt: useGatePrompt(playbackGate.gate),
     digits: useNumberDigits(ctl.entry),
-    state: useEngineState(engine),
+    zapWait: zapWaitOf(state, useRunway(engine), useHeldFrame(engine), channel),
     panelStyle: usePanelStyle(),
     info: useCatchupInfo(ctl.catchup, usePlaybackInfo(channel, instant, details, clock), clock),
     recents: useRecentCards(session.channels, channel?.id ?? null, instant, clock),

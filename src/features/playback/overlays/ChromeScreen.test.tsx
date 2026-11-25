@@ -47,6 +47,26 @@ describe('Chrome', () => {
     );
     const chrome = screen.getByTestId('playback-chrome');
     expect(chrome).toHaveAttribute('data-overlay', 'None');
+    expect(screen.queryByTestId('zap-wait')).toBeNull();
+    act(() => {
+      engine.state = { kind: 'Buffering' };
+      engine.runway = { ahead: 2.2, need: 6 };
+      engine.emit();
+    });
+    expect(screen.getByTestId('zap-wait-card')).toHaveTextContent('News One');
+    expect(screen.getByTestId('runway-label')).toHaveTextContent('Buffering · 2 s of 6 s');
+    expect(screen.getByTestId('zap-wait').querySelectorAll('[data-focus-id]')).toHaveLength(0);
+    act(() => {
+      engine.heldFrame = { kind: 'Held' };
+      engine.emit();
+    });
+    expect(screen.queryByTestId('zap-wait-card')).toBeNull();
+    expect(screen.getByTestId('runway-progress')).toBeInTheDocument();
+    act(() => {
+      engine.state = { kind: 'Playing' };
+      engine.emit();
+    });
+    expect(screen.queryByTestId('zap-wait')).toBeNull();
     act(() => ctl.commands.execute({ kind: 'ShowInfo' }));
     expect(chrome).toHaveAttribute('data-overlay', 'Info');
     expect(screen.getByTestId('info-channel')).toHaveTextContent('1 News One');

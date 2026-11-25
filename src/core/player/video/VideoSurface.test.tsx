@@ -24,6 +24,8 @@ describe('VideoSurface', () => {
     const host = screen.getByTestId('video-surface-host');
     const video = screen.getByTestId('video-surface');
     expect(host.firstChild).toBe(video);
+    expect(host.lastChild).toBe(screen.getByTestId('held-frame'));
+    expect(host.style.display).toBe('grid');
     expect(host.className).toBe('h-full w-full bg-black');
     expect(video).toHaveAttribute('data-state', 'Idle');
     expect(host).toHaveAttribute('data-state', 'Idle');
@@ -43,6 +45,7 @@ describe('VideoSurface', () => {
     const second = render(<VideoSurface engine={engine} />);
     const hosts = screen.getAllByTestId('video-surface-host');
     expect(hosts[1]?.firstChild).toBe(video);
+    expect(hosts[1]?.children).toHaveLength(2);
     expect(hosts[0]?.children).toHaveLength(0);
     first.unmount();
     expect(hosts[1]?.firstChild).toBe(video);

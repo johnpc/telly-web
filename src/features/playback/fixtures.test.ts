@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { ChannelRow, ProgramRow } from '@/core/db/types';
-import type { PlayerEngine } from '@/core/player';
+import type { EngineState, HeldFrame, PlayerEngine, RunwayProgress } from '@/core/player';
 import { NO_TRACKS } from '@/core/player';
 import { MemoryKeyValueStore } from '@/core/kv/memoryKeyValueStore';
 import { TuneController } from './tune/tuneController';
@@ -51,7 +51,11 @@ export function program(tvgId: string, startMs: number, endMs: number, title = '
 
 export const UTC = { is24h: false, timeZone: 'UTC' } as const;
 
+/** Readings the tests poke directly, then `emit()` to re-render the subscribers. */
 export interface FakeEngine extends PlayerEngine {
+  state: EngineState;
+  runway: RunwayProgress;
+  heldFrame: HeldFrame;
   emit(): void;
 }
 
@@ -60,8 +64,10 @@ export function fakeEngine(): FakeEngine {
   const listeners = new Set<() => void>();
   const video = document.createElement('video');
   const engine = {
-    state: { kind: 'Idle' },
+    state: { kind: 'Idle' } as EngineState,
     paused: false,
+    runway: { ahead: 0, need: 0 } as RunwayProgress,
+    heldFrame: { kind: 'Empty' } as HeldFrame,
     subscribe: (l: () => void) => {
       listeners.add(l);
       return () => listeners.delete(l);

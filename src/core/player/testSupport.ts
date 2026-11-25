@@ -24,3 +24,11 @@ export function fakeTimeRanges(ranges: [number, number][]): TimeRanges {
     end: (i: number) => ranges[i]?.[1] ?? 0,
   };
 }
+
+/** jsdom has no canvas: give `canvas.getContext('2d')` a stand-in (or null for "cannot draw"). */
+export function stubCanvasContext(
+  canvas: HTMLCanvasElement,
+  context: Partial<CanvasRenderingContext2D> | null,
+): void {
+  Object.defineProperty(canvas, 'getContext', { configurable: true, value: () => context });
+}

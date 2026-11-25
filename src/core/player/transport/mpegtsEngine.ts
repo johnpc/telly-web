@@ -7,7 +7,7 @@
 // imported on first use so the bundle stays small.
 import type Mpegts from 'mpegts.js';
 import type { LoadOptions } from '../engine/PlayerEngine';
-import { attachBufferGate, thresholdsFor } from '../gate/bufferGate';
+import { attachBufferGate } from '../gate/bufferGate';
 import {
   detailsOf,
   isLivePipe,
@@ -70,7 +70,7 @@ export class MpegtsTransport implements Transport {
     const [lib, probe] = await Promise.all([this.loadLib(), this.probe(url)]);
     if (generation !== this.generation) return;
     this.player = startPlayer(lib, video, url, isLivePipe(options, probe), options, listener);
-    this.detachGate = attachBufferGate(video, options.buffer ?? thresholdsFor('Small')).detach;
+    this.detachGate = attachBufferGate(video, options).detach;
     listener.onTracksChanged(NO_TRACKS);
   }
 

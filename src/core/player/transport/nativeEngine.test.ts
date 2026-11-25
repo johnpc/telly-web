@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NativeTransport } from './nativeEngine';
-import { fire, stubMediaPlayback } from '../testSupport';
+import { RunwayStore } from '../gate/runwayProgress';
+import { defineReadOnly, fakeTimeRanges, fire, stubMediaPlayback } from '../testSupport';
 import type { TransportListener } from './transport';
 
 function listener(): TransportListener & { calls: unknown[][] } {
@@ -44,6 +45,33 @@ describe('NativeTransport', () => {
     expect(load).toHaveBeenCalledTimes(2);
     transport.stop();
     expect(load).toHaveBeenCalledTimes(2);
+  });
+
+  it('gates the element like every transport; a file buffered to its end plays out below the runway', async () => {
+    const transport = new NativeTransport();
+    const runway = new RunwayStore();
+    const play = vi.spyOn(video, 'play');
+    const pause = vi.spyOn(video, 'pause');
+    defineReadOnly(video, 'paused', false);
+    defineReadOnly(video, 'buffered', fakeTimeRanges([[0, 2]]));
+    await transport.load(
+      video,
+      'http://s/vod.mp4',
+      { live: false, buffer: { runwaySec: 6 }, runway },
+      listener(),
+    );
+    fire(video, 'play');
+    expect(pause).toHaveBeenCalledTimes(1);
+    expect(runway.get()).toEqual({ ahead: 2, need: 6 });
+    defineReadOnly(video, 'duration', 4.5);
+    defineReadOnly(video, 'buffered', fakeTimeRanges([[0, 4.4]]));
+    fire(video, 'progress');
+    expect(play).toHaveBeenCalledTimes(1);
+    transport.stop();
+    expect(runway.get()).toEqual({ ahead: 0, need: 0 });
+    fire(video, 'waiting');
+    fire(video, 'progress');
+    expect(play).toHaveBeenCalledTimes(1);
   });
 
   it('a stop before metadata cancels the pending seek; selections are inert', async () => {

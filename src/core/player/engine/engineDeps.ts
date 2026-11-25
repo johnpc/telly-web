@@ -2,12 +2,13 @@
 // the deferred-work and observation hooks tests replace (Android's
 // `EngineSchedulers`). Prod defaults: setTimeout retries, a setInterval
 // watchdog, console telemetry under the `telly-play` tag.
-import type { BufferThresholds } from '../gate/bufferGate';
+import { type BufferThresholds, thresholdsFor } from '../gate/bufferGate';
 import type { Schedule } from '../connection/engineReconnector';
 import { PlaybackTelemetry, consoleTelemetryLog } from '../telemetry/playbackTelemetry';
 import type { Ticker } from '../connection/stallWatchdog';
 import { intervalTicker } from '../connection/stallWatchdog';
 import type { ReconnectPolicy } from '../connection/reconnectPolicy';
+import type { StreamConcurrency } from '../connection/streamConcurrency';
 import type { TransportFactory } from '../transport/streamTuner';
 
 export interface EngineDeps {
@@ -21,6 +22,8 @@ export interface EngineDeps {
   policy?: ReconnectPolicy;
   /** Settings → Playback → Buffer size, read live per tune; default Small. */
   bufferThresholds?: () => BufferThresholds;
+  /** The `Provider stream limit` registry; default the app's one instance. */
+  concurrency?: StreamConcurrency;
 }
 
 export const setTimeoutSchedule: Schedule = (ms, task) => {
@@ -38,4 +41,9 @@ export function tickerOf(deps: EngineDeps): Ticker | null {
 
 export function scheduleOf(deps: EngineDeps): Schedule {
   return deps.schedule ?? setTimeoutSchedule;
+}
+
+/** The runway for the tune starting now (the setting is read live; Small when nothing is wired). */
+export function thresholdsOf(deps: EngineDeps): BufferThresholds {
+  return deps.bufferThresholds?.() ?? thresholdsFor('Small');
 }

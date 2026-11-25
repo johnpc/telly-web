@@ -8,6 +8,8 @@ import type { StreamDetails } from '../telemetry/streamDetails';
 import type { TrackSnapshot } from './trackModels';
 
 import type { BufferThresholds } from '../gate/bufferGate';
+import type { RunwayProgress, RunwayStore } from '../gate/runwayProgress';
+import type { HeldFrame } from '../video/frameHold';
 
 export interface LoadOptions {
   /**
@@ -20,8 +22,10 @@ export interface LoadOptions {
   startPositionMs?: number;
   /** Live channel (chase the edge on reconnect) vs finite archive/VOD. */
   live: boolean;
-  /** Start / post-stall runway for raw-TS pipes (Settings → Playback → Buffer size); engine-filled when absent. */
+  /** Start / post-stall runway (Settings → Playback → Buffer size); engine-filled when absent. */
   buffer?: BufferThresholds;
+  /** Where the tune's buffer gate publishes its runway; engine-filled, a transport only passes it on. */
+  runway?: RunwayStore;
 }
 
 /** How the web can honour an audio-sync offset (positive = audio delayed). */
@@ -32,6 +36,10 @@ export interface PlayerEngine {
   readonly state: EngineState;
   /** True while user-paused; `load` and `stop` reset it. */
   readonly paused: boolean;
+  /** The buffer gate's runway as it builds (`need` 0 = no gate attached); `subscribe` fires on change. */
+  readonly runway: RunwayProgress;
+  /** The previous picture kept over the element while the next stream tunes; `subscribe` fires on change. */
+  readonly heldFrame: HeldFrame;
   subscribe(listener: () => void): () => void;
 
   /** Binds the `<video>` this engine drives (created by `createVideoElement`). */

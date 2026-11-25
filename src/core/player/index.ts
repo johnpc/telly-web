@@ -3,6 +3,14 @@
 export type { AudioSyncSupport, LoadOptions, PlayerEngine } from './engine/PlayerEngine';
 export type { EngineState, EngineStateKind } from './connection/engineState';
 export { isStreaming } from './connection/engineState';
+export type { StreamEnd, StreamHandle, StreamLimit } from './connection/streamConcurrency';
+export {
+  STREAM_LIMIT_MESSAGE,
+  StreamConcurrency,
+  isStreamLimited,
+  streamConcurrency,
+  streamHostOf,
+} from './connection/streamConcurrency';
 export type { ResizeMode } from './video/resizeMode';
 export { objectFitOf, resizeModeOf } from './video/resizeMode';
 export type { StreamDetails } from './telemetry/streamDetails';
@@ -27,6 +35,17 @@ export {
 export { WebPlayerEngine } from './engine/webPlayerEngine';
 export type { EngineDeps } from './engine/engineDeps';
 export { createVideoElement, VIDEO_TESTID } from './video/videoElement';
-export { useEnginePaused, useEngineState, useLeasedEngine, usePlayerEngine } from './video/usePlayerEngine';
+export {
+  useEnginePaused,
+  useEngineState,
+  useHeldFrame,
+  useLeasedEngine,
+  usePlayerEngine,
+  useRunway,
+} from './video/usePlayerEngine';
+export type { RunwayProgress } from './gate/runwayProgress';
+export { NO_RUNWAY, runwayPermille, runwaySeconds } from './gate/runwayProgress';
+export type { HeldFrame } from './video/frameHold';
+export { HELD_FRAME_TESTID } from './video/frameHold';
 export { VideoSurface, type VideoSurfaceProps } from './video/VideoSurface';
 export { LOG_TAG } from './telemetry/playbackTelemetry';

@@ -7,6 +7,8 @@
 import { useMemo, useSyncExternalStore } from 'react';
 import type { PlayerEngine } from '../engine/PlayerEngine';
 import type { EngineState } from '../connection/engineState';
+import type { RunwayProgress } from '../gate/runwayProgress';
+import type { HeldFrame } from './frameHold';
 import { SharedResource } from '@/core/state/sharedResource';
 import { SubscriberLease } from '@/core/state/subscriberLease';
 import type { Lease, Releasable, SharedPlayerEngine } from '../engine/sharedPlayerEngine';
@@ -24,6 +26,24 @@ export function useEnginePaused(engine: PlayerEngine): boolean {
     (listener) => engine.subscribe(listener),
     () => engine.paused,
     () => engine.paused,
+  );
+}
+
+/** The buffer gate's runway as it builds (`need` 0 while no gate is attached). */
+export function useRunway(engine: PlayerEngine): RunwayProgress {
+  return useSyncExternalStore(
+    (listener) => engine.subscribe(listener),
+    () => engine.runway,
+    () => engine.runway,
+  );
+}
+
+/** Whether the previous stream's last frame is held over the element. */
+export function useHeldFrame(engine: PlayerEngine): HeldFrame {
+  return useSyncExternalStore(
+    (listener) => engine.subscribe(listener),
+    () => engine.heldFrame,
+    () => engine.heldFrame,
   );
 }
 

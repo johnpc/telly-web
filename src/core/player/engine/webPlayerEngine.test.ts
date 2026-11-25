@@ -3,21 +3,31 @@ import { STALLED } from '../connection/engineReconnector';
 import { PlaybackTelemetry } from '../telemetry/playbackTelemetry';
 import { ReconnectPolicy } from '../connection/reconnectPolicy';
 import type { Ticker } from '../connection/stallWatchdog';
-import { defineReadOnly, fakeTimeRanges, fire, stubMediaPlayback } from '../testSupport';
+import { defineReadOnly, fakeTimeRanges, fire, stubCanvasContext, stubMediaPlayback } from '../testSupport';
 import { NO_TRACKS, type TrackSnapshot } from './trackModels';
 import type { Transport, TransportListener } from '../transport/transport';
 import { createVideoElement } from '../video/videoElement';
+import { StreamConcurrency } from '../connection/streamConcurrency';
 import { WebPlayerEngine } from './webPlayerEngine';
+import type { LoadOptions } from './PlayerEngine';
+import { RunwayStore } from '../gate/runwayProgress';
 
 class FakeTransport implements Transport {
   readonly kind = 'mpegts';
   tracks: TrackSnapshot = NO_TRACKS;
   loads: string[] = [];
+  options: LoadOptions[] = [];
   stops = 0;
   listener: TransportListener | null = null;
   selected: unknown[] = [];
-  load(_video: HTMLVideoElement, url: string, _o: unknown, listener: TransportListener): Promise<void> {
+  load(
+    _video: HTMLVideoElement,
+    url: string,
+    options: LoadOptions,
+    listener: TransportListener,
+  ): Promise<void> {
     this.loads.push(url);
+    this.options.push(options);
     this.listener = listener;
     return Promise.resolve();
   }
@@ -68,6 +78,9 @@ describe('WebPlayerEngine', () => {
         (line) => lines.push(line),
       ),
       policy: new ReconnectPolicy({ maxAttempts: 2 }),
+      // A registry per test: the engines here are never released, and the app's shared one would
+      // read every earlier test's stream as a sibling on host `s` (see streamSession.test.ts).
+      concurrency: new StreamConcurrency(),
     });
     engine.attach(video);
     engine.subscribe(() => {
@@ -145,6 +158,7 @@ describe('WebPlayerEngine', () => {
       schedule: (delayMs, task) => scheduled.push({ delayMs, task }),
       ticker: null,
       telemetry: null,
+      concurrency: new StreamConcurrency(),
     });
     broken.attach(createVideoElement());
     broken.load('http://s/1.ts', { live: true });
@@ -264,6 +278,78 @@ describe('WebPlayerEngine', () => {
     expect(engine.audioSyncSupport).toBe('unsupported');
     engine.audioSyncMs = 200;
     expect(engine.audioSyncMs).toBe(0);
+  });
+
+  it('hands every tune its runway store and publishes the gate readings written there', async () => {
+    engine.load('http://s/1.ts', { live: true });
+    await loaded();
+    const options = transport.options[0];
+    expect(options?.buffer).toEqual({ runwaySec: 6 });
+    expect(options?.runway).toBeInstanceOf(RunwayStore);
+    expect(engine.runway).toEqual({ ahead: 0, need: 0 });
+    const before = changes;
+    options?.runway?.set({ ahead: 2.5, need: 6 });
+    expect(engine.runway).toEqual({ ahead: 2.5, need: 6 });
+    expect(changes).toBe(before + 1);
+  });
+
+  it('holds the last frame over the element from a zap until the next stream renders', async () => {
+    const host = document.createElement('div');
+    engine.moveVideoTo(host);
+    const canvas = host.querySelector('canvas') as HTMLCanvasElement;
+    expect(host.lastElementChild).toBe(canvas);
+    const drawImage = vi.fn();
+    stubCanvasContext(canvas, { drawImage });
+    engine.load('http://s/1.ts', { live: true });
+    await loaded();
+    expect(engine.heldFrame).toEqual({ kind: 'Empty' });
+    fire(video, 'playing');
+    defineReadOnly(video, 'readyState', 4);
+    defineReadOnly(video, 'videoWidth', 1280);
+    defineReadOnly(video, 'videoHeight', 720);
+    const before = changes;
+    engine.load('http://s/2.ts', { live: true });
+    expect(engine.heldFrame).toEqual({ kind: 'Held' });
+    expect(changes).toBe(before + 2);
+    expect(drawImage).toHaveBeenCalledWith(video, 0, 0, 1280, 720);
+    expect(canvas.hidden).toBe(false);
+    await vi.waitFor(() => expect(transport.loads).toHaveLength(2));
+    fire(video, 'playing');
+    expect(engine.heldFrame).toEqual({ kind: 'Empty' });
+    expect(canvas.hidden).toBe(true);
+    engine.load('http://s/3.ts', { live: true });
+    expect(engine.heldFrame.kind).toBe('Held');
+    engine.stop();
+    expect(engine.heldFrame.kind).toBe('Empty');
+    engine.release();
+    expect(host.children).toHaveLength(0);
+  });
+
+  it('a reconnect keeps the held picture under the pill; a spent budget drops it', async () => {
+    const host = document.createElement('div');
+    engine.moveVideoTo(host);
+    const canvas = host.querySelector('canvas') as HTMLCanvasElement;
+    stubCanvasContext(canvas, { drawImage: vi.fn() });
+    engine.load('http://s/1.ts', { live: true });
+    await loaded();
+    fire(video, 'playing');
+    defineReadOnly(video, 'readyState', 4);
+    defineReadOnly(video, 'videoWidth', 1280);
+    defineReadOnly(video, 'videoHeight', 720);
+    transport.listener?.onError('drop');
+    expect(engine.state.kind).toBe('Reconnecting');
+    expect(engine.heldFrame.kind).toBe('Empty');
+    scheduled[0]?.task();
+    await vi.waitFor(() => expect(transport.loads).toHaveLength(2));
+    expect(engine.heldFrame.kind).toBe('Held');
+    transport.listener?.onError('again');
+    expect(engine.state).toEqual({ kind: 'Reconnecting', attempt: 2, epoch: 2 });
+    expect(engine.heldFrame.kind).toBe('Held');
+    scheduled[1]?.task();
+    await vi.waitFor(() => expect(transport.loads).toHaveLength(3));
+    transport.listener?.onError('spent');
+    expect(engine.state).toEqual({ kind: 'Error', message: 'spent' });
+    expect(engine.heldFrame.kind).toBe('Empty');
   });
 
   it('a detached engine is inert and keeps its settings for the next attach', () => {

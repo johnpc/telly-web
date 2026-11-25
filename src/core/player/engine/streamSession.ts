@@ -2,11 +2,18 @@
 // `Media3PlayerEngine` that talks to the reconnector): begin → tune through
 // the transport → READY resets the budget; an error or a watchdog stall arms
 // a retry that re-tunes the SAME url on the SAME budget; `end` retires
-// everything. Every connection-state write goes through the one store.
+// everything. Every connection-state write goes through the one store. The
+// session also holds the engine's seat in the `Provider stream limit`
+// registry (`StreamSlot`): an end that proves the one-stream line surfaces
+// `STREAM_LIMITED` instead of a retry, and a tune that would be the second
+// stream on a Limited host is refused before it connects. The zap frame hold
+// is captured here, right before a (re)tune takes the element's picture away.
 import type { LoadOptions } from './PlayerEngine';
 import { ActiveStream } from '../connection/activeStream';
 import type { EngineReconnector } from '../connection/engineReconnector';
-import { BUFFERING, PLAYING, type EngineStateStore } from '../connection/engineState';
+import { BUFFERING, ENDED, PLAYING, type EngineStateStore } from '../connection/engineState';
+import { STREAM_LIMITED, type StreamConcurrency } from '../connection/streamConcurrency';
+import { StreamSlot } from '../connection/streamSlot';
 import { streamLabel, type PlaybackTelemetry } from '../telemetry/playbackTelemetry';
 import type { StreamTuner } from '../transport/streamTuner';
 import type { TrackSnapshot } from './trackModels';
@@ -23,13 +30,20 @@ export interface SessionDeps {
   onTracks: (snapshot: TrackSnapshot) => void;
   /** The stream is bound and wanted: start the element. */
   onTuned: (video: HTMLVideoElement) => void;
+  /** The `Provider stream limit` registry; the app's one instance unless a test injects its own. */
+  concurrency?: StreamConcurrency | undefined;
+  /** The engine's `Zap frame hold` (`FrameHold.capture`); tests without a picture leave it out. */
+  frames?: { capture(video: HTMLVideoElement): void } | undefined;
 }
 
 export class StreamSession {
   private readonly active = new ActiveStream();
   private last: { url: string; options: LoadOptions } | null = null;
 
-  constructor(private readonly deps: SessionDeps) {}
+  constructor(
+    private readonly deps: SessionDeps,
+    private readonly slot = new StreamSlot(deps.concurrency),
+  ) {}
 
   /**
    * A new stream: fresh budget, fresh formats, Buffering, tune. A re-load of
@@ -42,6 +56,8 @@ export class StreamSession {
     this.deps.reconnector.reset();
     this.deps.feed.reset();
     this.deps.telemetry?.onLoad(streamLabel(url));
+    this.slot.close('Closed');
+    if (this.slot.refuses(url, options)) return this.refuse();
     this.deps.store.set(BUFFERING);
     void this.tune(url, options);
   }
@@ -52,6 +68,7 @@ export class StreamSession {
     this.active.onStop();
     this.last = null;
     this.deps.reconnector.reset();
+    this.slot.close('Closed');
   }
 
   /** READY: the budget resets so a drop hours later starts fresh. */
@@ -61,9 +78,15 @@ export class StreamSession {
     this.deps.store.set(PLAYING);
   }
 
+  /** The element reached the end of its media: a slate on a one-stream line, or the stream's own end. */
+  onEnded(): void {
+    this.deps.store.set(this.slot.close('Ended') ? STREAM_LIMITED : ENDED);
+  }
+
   fail(message: string): void {
     if (this.last === null) return;
     this.deps.telemetry?.onLoadError(message);
+    if (this.slot.close('Error')) return this.deps.store.set(STREAM_LIMITED);
     this.deps.store.set(this.deps.reconnector.onError(message, () => this.retry()));
   }
 
@@ -71,11 +94,21 @@ export class StreamSession {
     if (this.last !== null) this.deps.store.set(this.deps.reconnector.onStall(() => this.retry()));
   }
 
+  /** The provider is known to carry one stream and another is open: no connection, the honest state. */
+  private refuse(): void {
+    this.deps.tuner.cancel();
+    this.deps.store.set(STREAM_LIMITED);
+  }
+
   private async tune(url: string, options: LoadOptions): Promise<void> {
     const video = this.deps.videoOf();
     if (video === null) return;
+    this.deps.frames?.capture(video);
     try {
-      if (await this.deps.tuner.tune(video, url, options, this.listener())) this.deps.onTuned(video);
+      if (await this.deps.tuner.tune(video, url, options, this.listener())) {
+        this.slot.open(url, options);
+        this.deps.onTuned(video);
+      }
     } catch (error) {
       this.fail(messageOf(error));
     }

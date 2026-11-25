@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BufferGate, attachBufferGate, bufferedAhead, bufferedToEnd, thresholdsFor } from './bufferGate';
+import { NO_RUNWAY, RunwayStore } from './runwayProgress';
 import { defineReadOnly, fakeTimeRanges, fire, stubMediaPlayback } from '../testSupport';
 
 function video(ahead: number, currentTime = 10): HTMLVideoElement {
@@ -91,7 +92,7 @@ describe('bufferGate', () => {
 
   it('attachBufferGate wires the element events and detaches cleanly', () => {
     const v = video(0.2);
-    const { gate, detach } = attachBufferGate(v, thresholdsFor('Small'));
+    const { gate, detach } = attachBufferGate(v, { live: true, buffer: thresholdsFor('Small') });
     fire(v, 'play');
     expect(gate.current.kind).toBe('Starting');
     defineReadOnly(v, 'buffered', fakeTimeRanges([[0, 20]]));
@@ -102,6 +103,32 @@ describe('bufferGate', () => {
     detach();
     fire(v, 'timeupdate');
     expect(gate.current.kind).toBe('Holding');
+  });
+
+  it('publishes the runway it measures on every check (and zero once detached)', () => {
+    const v = video(0.5);
+    defineReadOnly(v, 'paused', false);
+    const runway = new RunwayStore();
+    const readings: { ahead: number; need: number }[] = [];
+    runway.subscribe(() => readings.push(runway.get()));
+    const { gate, detach } = attachBufferGate(v, { live: true, buffer: thresholdsFor('Medium'), runway });
+    expect(runway.get()).toEqual({ ahead: 0, need: 8 });
+    fire(v, 'play');
+    expect(runway.get()).toEqual({ ahead: 0.5, need: 8 });
+    defineReadOnly(v, 'buffered', fakeTimeRanges([[0, 14]]));
+    fire(v, 'progress');
+    expect(runway.get()).toEqual({ ahead: 4, need: 8 });
+    defineReadOnly(v, 'buffered', fakeTimeRanges([[0, 18.5]]));
+    fire(v, 'timeupdate');
+    expect(gate.current.kind).toBe('Playing');
+    expect(runway.get()).toEqual({ ahead: 8.5, need: 8 });
+    defineReadOnly(v, 'buffered', fakeTimeRanges([[0, 30]]));
+    fire(v, 'timeupdate');
+    expect(runway.get()).toEqual({ ahead: 8.5, need: 8 });
+    detach();
+    expect(runway.get()).toBe(NO_RUNWAY);
+    expect(readings.map((r) => r.ahead)).toEqual([0, 0.5, 4, 8.5, 0]);
+    expect(attachBufferGate(video(1), { live: true }).gate.current.kind).toBe('Starting');
   });
 
   it('a finite file buffered to its end plays out even below the runway', () => {

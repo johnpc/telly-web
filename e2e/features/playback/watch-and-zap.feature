@@ -60,6 +60,35 @@ Feature: Watch live TV and zap between channels
     Then I see the quick-bar slots "Search", "Channels list", "Recordings", "Multiview" and "Picture-in-picture"
     And I see the live stream slots "1280 × 720", "Mono", "0 ms" and "Off"
 
+  # ---- web-specific: the zap wait (no Android counterpart) ----
+  # A browser cannot start a live pipe on its first bytes: the buffer gate
+  # waits for Settings → Playback → Buffer size of runway before the first
+  # frame (CLAUDE.md 2026-11-23 "Rock-solid live playback"). The wait is
+  # shown as progress over the previous channel's last frame — never black —
+  # or, on a first tune, over a card with the channel logo and name. The
+  # fixture pipe is slowed to real-time so the hold is observable.
+
+  # Channel 2 shares channel 1's stream URL (a same-stream zap is the engine's
+  # no-op hand-over), so the zap goes to a channel with a stream of its own.
+  Scenario: A channel change keeps the previous picture up and shows the runway building
+    Given playback goes fullscreen on channel 1 "News One"
+    And the stream pipe delivers at real-time rate
+    And the buffer size is "Large"
+    When I zapped to channel 7 "Sports Arena"
+    Then the previous picture stays up while the runway builds
+    And I see the runway progress towards 12 s
+    And playback goes fullscreen on channel 7 "Sports Arena"
+    And the zap wait is gone
+
+  Scenario: A first tune shows the channel card while the runway builds
+    Given the stream pipe delivers at real-time rate
+    And the buffer size is "Large"
+    When I relaunch telly
+    Then the channel card for "News One" stands in for the picture
+    And I see the runway progress towards 12 s
+    And playback goes fullscreen on channel 1 "News One"
+    And the zap wait is gone
+
   # Every quick-bar slot is live: Recordings opens the DVR library
   # (recording.feature), the four stream slots open the pickers below.
 
