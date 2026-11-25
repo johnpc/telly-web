@@ -8,14 +8,27 @@ import {
   windowHost,
   type PwaHost,
 } from './pwa';
+import { PwaUpdate, type UpdateHost } from './pwaUpdate';
 
 const XBOX_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64; Xbox; Xbox Series X) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edge/122.0.0.0';
 const DESKTOP_UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/122.0 Safari/537.36';
+const VERSION = 'cafe0042';
 
-function container(register = vi.fn().mockResolvedValue(undefined)): ServiceWorkerContainer {
-  return { register } as unknown as ServiceWorkerContainer;
+/** A registration the way `register()` resolves one: nothing installing or waiting. */
+function registration(): ServiceWorkerRegistration {
+  return Object.assign(new EventTarget(), {
+    installing: null,
+    waiting: null,
+  }) as unknown as ServiceWorkerRegistration;
+}
+
+function container(register = vi.fn().mockResolvedValue(registration())): ServiceWorkerContainer {
+  return Object.assign(new EventTarget(), {
+    register,
+    controller: null,
+  }) as unknown as ServiceWorkerContainer;
 }
 
 function host(extra: Partial<PwaHost> = {}): PwaHost {
@@ -24,6 +37,7 @@ function host(extra: Partial<PwaHost> = {}): PwaHost {
     search: '',
     dev: false,
     baseUrl: '/',
+    version: VERSION,
     serviceWorker: container(),
     ...extra,
   };
@@ -44,13 +58,13 @@ describe('isXbox', () => {
 });
 
 describe('planPwaBoot', () => {
-  it('registers the worker at <base>sw.js in a production build', () => {
+  it('registers the worker at <base>sw.js?v=<shell version> in a production build', () => {
     expect(planPwaBoot(host())).toEqual({
       xboxSafeArea: false,
       serviceWorker: 'register',
-      scriptUrl: '/sw.js',
+      scriptUrl: `/sw.js?v=${VERSION}`,
     });
-    expect(planPwaBoot(host({ baseUrl: '/telly-web/' })).scriptUrl).toBe('/telly-web/sw.js');
+    expect(planPwaBoot(host({ baseUrl: '/telly-web/' })).scriptUrl).toBe(`/telly-web/sw.js?v=${VERSION}`);
   });
 
   it('never registers under the dev server or the e2e harness', () => {
@@ -71,12 +85,35 @@ describe('planPwaBoot', () => {
 });
 
 describe('applyPwaPlan', () => {
-  it('toggles the safe-area class on <html> and registers the worker', async () => {
-    const register = vi.fn().mockResolvedValue(undefined);
+  it('toggles the safe-area class on <html>, registers the worker and hands it to the update machine', async () => {
+    const reg = registration();
+    const register = vi.fn().mockResolvedValue(reg);
     const h = host({ userAgent: XBOX_UA, serviceWorker: container(register) });
-    await applyPwaPlan(planPwaBoot(h), document.documentElement, h);
+    const updates = new PwaUpdate();
+    const watch = vi.spyOn(updates, 'watch').mockReturnValue(() => undefined);
+    await applyPwaPlan(planPwaBoot(h), document.documentElement, h, updates);
     expect(document.documentElement.classList.contains(TV_SAFE_AREA_CLASS)).toBe(true);
-    expect(register).toHaveBeenCalledWith('/sw.js');
+    expect(register).toHaveBeenCalledWith(`/sw.js?v=${VERSION}`);
+    expect(watch).toHaveBeenCalledWith(expect.objectContaining({ version: VERSION }), reg);
+  });
+
+  it('builds the machine’s host over the real container: versioned re-registration and a live document check', async () => {
+    const register = vi.fn().mockResolvedValue(registration());
+    const h = host({ baseUrl: '/telly-web/', serviceWorker: container(register) });
+    const updates = new PwaUpdate();
+    let seen: UpdateHost | undefined;
+    vi.spyOn(updates, 'watch').mockImplementation((updateHost) => {
+      seen = updateHost;
+      return () => undefined;
+    });
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('<html></html>'));
+    await applyPwaPlan(planPwaBoot(h), document.documentElement, h, updates);
+    await seen?.register('feed0001');
+    expect(register).toHaveBeenLastCalledWith('/telly-web/sw.js?v=feed0001');
+    await seen?.liveVersion();
+    expect(fetchSpy).toHaveBeenCalledWith('/telly-web/?shell=live', { cache: 'no-store' });
+    expect(seen?.container).toBe(h.serviceWorker);
+    expect(seen?.document).toBe(document);
   });
 
   it('removes a stale class and skips registration when the plan says so', async () => {
@@ -110,6 +147,7 @@ describe('window bootstrap', () => {
     expect(h.dev).toBe(true);
     expect(h.baseUrl).toBe('/');
     expect(h.userAgent).toBe(navigator.userAgent);
+    expect(h.version).toMatch(/^[0-9a-f]{8}$/);
     expect(() => bootPwa()).not.toThrow();
     expect(document.documentElement.classList.contains(TV_SAFE_AREA_CLASS)).toBe(false);
   });

@@ -1,10 +1,14 @@
 /**
  * Installable PWA bootstrap — the Xbox / Microsoft Store packaging target
  * (PWABuilder wraps https://telly.jpc.io into an MSIX; see platforms/xbox).
- * Two concerns: register the app-shell service worker (public/sw.js) in
- * production builds only, and reserve a TV-safe inset when the host is an Xbox.
+ * Three concerns: register the app-shell service worker (public/sw.js) in
+ * production builds only, hand its registration to the `PWA update` machine
+ * (pwaUpdate.ts) so a deploy made while the app runs becomes the "telly was
+ * updated" toast, and reserve a TV-safe inset when the host is an Xbox.
  */
 import './pwa.css';
+import { type PwaUpdate, type UpdateHost, pwaUpdate } from './pwaUpdate';
+import { liveShellVersion, shellVersion, workerUrl } from './shellVersion';
 
 /** The slice of the window the bootstrap reads; tests pass plain objects. */
 export interface PwaHost {
@@ -15,6 +19,8 @@ export interface PwaHost {
   dev: boolean;
   /** `import.meta.env.BASE_URL` — `/` or `/telly-web/`; the worker lives at `<base>sw.js`. */
   baseUrl: string;
+  /** The shell version this document runs (`shellVersion`); the worker is registered as `sw.js?v=<version>`. */
+  version: string;
   serviceWorker: ServiceWorkerContainer | undefined;
 }
 
@@ -42,7 +48,7 @@ export function planPwaBoot(host: PwaHost): PwaPlan {
   return {
     xboxSafeArea: isXbox(host.userAgent),
     serviceWorker: serviceWorkerPlan(host),
-    scriptUrl: `${host.baseUrl}sw.js`,
+    scriptUrl: workerUrl(host.baseUrl, host.version),
   };
 }
 
@@ -54,15 +60,33 @@ function serviceWorkerPlan(host: PwaHost): ServiceWorkerPlan {
 }
 
 /** Applies a plan to the DOM and the service-worker container; resolves once registration settled. */
-export async function applyPwaPlan(plan: PwaPlan, root: HTMLElement, host: PwaHost): Promise<void> {
+export async function applyPwaPlan(
+  plan: PwaPlan,
+  root: HTMLElement,
+  host: PwaHost,
+  updates: PwaUpdate = pwaUpdate,
+): Promise<void> {
   root.classList.toggle(TV_SAFE_AREA_CLASS, plan.xboxSafeArea);
   if (plan.serviceWorker !== 'register' || !host.serviceWorker) return;
   try {
-    await host.serviceWorker.register(plan.scriptUrl);
+    const registration = await host.serviceWorker.register(plan.scriptUrl);
+    updates.watch(updateHost(host, host.serviceWorker), registration);
   } catch (error: unknown) {
     // A failed registration leaves a perfectly working (non-installable) web app behind.
     console.warn('telly: service worker registration failed', error);
   }
+}
+
+/** The update machine's view of this window. */
+function updateHost(host: PwaHost, container: ServiceWorkerContainer): UpdateHost {
+  return {
+    container,
+    document,
+    version: host.version,
+    liveVersion: () => liveShellVersion(host.baseUrl),
+    register: (version) => container.register(workerUrl(host.baseUrl, version)),
+    reload: () => window.location.reload(),
+  };
 }
 
 export function windowHost(): PwaHost {
@@ -71,6 +95,7 @@ export function windowHost(): PwaHost {
     search: window.location.search,
     dev: import.meta.env.DEV,
     baseUrl: import.meta.env.BASE_URL,
+    version: shellVersion(document, import.meta.env.BASE_URL),
     serviceWorker: 'serviceWorker' in navigator ? navigator.serviceWorker : undefined,
   };
 }

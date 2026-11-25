@@ -6,12 +6,21 @@
  * changes meaning). Everything else — playlists, EPG, streams, logos, anything
  * under /proxy/ or on another origin — is not intercepted at all. A new deploy
  * changes the start document; when that is noticed the old hashed assets are
- * dropped so the cache never grows across releases. `skipWaiting` +
- * `clients.claim` make an updated worker take over immediately.
+ * dropped so the cache never grows across releases.
+ *
+ * Taking over is the PAGE's decision, not this file's: a newly installed
+ * worker waits until the page posts `{ type: 'skipWaiting' }` (the one
+ * mechanism — there is no install-time skipWaiting), then `clients.claim`
+ * raises `controllerchange` and the page reloads into the new shell. The page
+ * (src/platform/pwaUpdate.ts) sends it at once when it already runs the shell
+ * the worker was registered for, and only after the user accepts the
+ * "telly was updated" toast otherwise.
  *
  * Registered by src/platform/pwa.ts in production builds only (never in dev
- * or under the e2e harness). The scope is wherever the app is served from
- * (`/` on telly.jpc.io, `/telly-web/` on GitHub Pages).
+ * or under the e2e harness) as `sw.js?v=<shell version>`: this script never
+ * changes between deploys, the version in its URL does, so a deploy is a new
+ * worker. The scope is wherever the app is served from (`/` on telly.jpc.io,
+ * `/telly-web/` on GitHub Pages).
  */
 const SHELL_CACHE = 'telly-shell-v1';
 const scope = new URL(self.registration.scope);
@@ -22,12 +31,12 @@ const SHELL_URLS = ['./', 'manifest.webmanifest', 'icon.png', 'icon-192.png', 'i
 const ASSETS_PREFIX = new URL('assets/', scope).href;
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(SHELL_CACHE)
-      .then((cache) => precacheShell(cache))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => precacheShell(cache)));
+});
+
+/** The page's go-ahead to replace the controlling worker (see the header). */
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'skipWaiting') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {

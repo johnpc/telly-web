@@ -112,8 +112,10 @@ Partner Center → the **telly** product → _Start your submission_:
 
 ## 5. Updating
 
-- **Site changes**: deploy as usual; the installed app picks them up on the next
-  launch (network-first shell, new hashed assets, old ones pruned by `sw.js`).
+- **Site changes**: deploy as usual; a running app offers a "telly was updated ·
+  OK reload" toast within 15 minutes (or when it next becomes visible), and a
+  fresh launch picks the new shell up directly (network-first shell, new hashed
+  assets, old ones pruned by `sw.js`).
 - **Manifest / icon / identity changes**: regenerate the package with a higher
   version (`1.0.1.0`, …) and submit a new package in Partner Center.
 
